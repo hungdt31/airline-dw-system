@@ -1,0 +1,16 @@
+*.log
+*.db
+*.csv
+*.json
+*.txt
+*.pyc
+*.pyo
+*.pyd
+*.pyw
+*.pyz
+*.pywz
+*.pyzw
+*.pyz
+*.db-shm
+*.db-wal
+venv

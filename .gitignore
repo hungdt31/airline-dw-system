@@ -2,7 +2,7 @@
 *.db
 *.csv
 *.json
-*.txt
+*.pkl
 *.pyc
 *.pyo
 *.pyd

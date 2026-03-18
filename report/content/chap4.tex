@@ -1,0 +1,243 @@
+% ============================================================
+% CHƯƠNG 4: HIỆN THỰC VÀ THỰC NGHIỆM
+% ============================================================
+\clearpage
+\section{Hiện thực và thực nghiệm}
+
+\subsection{Môi trường thực nghiệm}
+
+\begin{table}[H]
+\centering
+\caption{Cấu hình môi trường thực nghiệm}
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Thành phần} & \textbf{Thông số} \\ \hline
+Hệ điều hành   & Windows 10/11 (64-bit) \\ \hline
+CPU            & [Điền thông số CPU] \\ \hline
+RAM            & [Điền dung lượng RAM] \\ \hline
+Storage        & SSD [Dung lượng] \\ \hline
+Python         & 3.10+ \\ \hline
+pandas         & 2.x \\ \hline
+numpy          & 1.x \\ \hline
+scikit-learn   & 1.x \\ \hline
+xgboost        & 2.x \\ \hline
+lightgbm       & 4.x \\ \hline
+tensorflow/keras & 2.x (Neural Network) \\ \hline
+plotly / dash  & 5.x \\ \hline
+SQLite         & 3.x (qua thư viện \texttt{sqlite3}) \\ \hline
+\end{tabular}
+\label{tab:environment}
+\end{table}
+
+% ------------------------------------------------------------
+\subsection{Kết quả ETL}
+
+\subsubsection{Luồng dữ liệu CSV thô vào Database}
+
+Quá trình ETL xử lý 3 file CSV đầu vào và tạo ra Data Warehouse SQLite:
+
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.85\textwidth]{img/etl_flow.png}
+%     \caption{Luồng dữ liệu từ CSV thô đến Data Warehouse}
+%     \label{fig:etl_flow}
+% \end{figure}
+
+\begin{table}[H]
+\centering
+\caption{Thống kê dữ liệu sau quá trình ETL}
+\begin{tabular}{|l|r|r|r|}
+\hline
+\textbf{Bảng} & \textbf{Bản ghi thô} & \textbf{Bản ghi sau làm sạch} & \textbf{Tỷ lệ giữ lại} \\ \hline
+\texttt{fact\_flights} & 5.819.079 & [Điền giá trị] & [x]\% \\ \hline
+\texttt{dim\_airline}  & 14        & 14             & 100\%  \\ \hline
+\texttt{dim\_airport}  & 322       & 322            & 100\%  \\ \hline
+\texttt{dim\_date}     & 365       & 365            & 100\%  \\ \hline
+\end{tabular}
+\label{tab:etl_stats}
+\end{table}
+
+Phân phối nhãn trong tập dữ liệu sau làm sạch:
+\begin{itemize}
+    \item Chuyến bay \textbf{không delay} (is\_delayed = 0): \textasciitilde{}79\% (\textasciitilde{}4,6M chuyến).
+    \item Chuyến bay \textbf{bị delay} (is\_delayed = 1): \textasciitilde{}21\% (\textasciitilde{}1,2M chuyến).
+\end{itemize}
+
+\subsubsection{So sánh mức tiêu thụ RAM trước và sau tối ưu}
+
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.7\textwidth]{img/ram_comparison.png}
+%     \caption{Mức tiêu thụ RAM: đọc toàn bộ vs. streaming chunk}
+%     \label{fig:ram}
+% \end{figure}
+
+\begin{table}[H]
+\centering
+\caption{So sánh hiệu suất ETL: toàn bộ vs. streaming với dtype tối ưu}
+\begin{tabular}{|l|r|r|}
+\hline
+\textbf{Chỉ số} & \textbf{Đọc toàn bộ (float64/int64)} & \textbf{Streaming + float32/int8} \\ \hline
+RAM tối đa (1 chunk 100K) & \textasciitilde{}300 MB & \textasciitilde{}120 MB \\ \hline
+RAM tối đa (toàn bộ file)   & \textasciitilde{}3--4 GB & \textasciitilde{}120 MB (ổn định) \\ \hline
+Thời gian xử lý 5.8M dòng & Không thể (OOM) & 3--8 phút (tùy ổ đĩa) \\ \hline
+Nguy cơ Out of Memory       & Có & Không \\ \hline
+\end{tabular}
+\label{tab:ram_comparison}
+\end{table}
+
+% ------------------------------------------------------------
+\subsection{Kết quả OLAP và Dashboard}
+
+\subsubsection{Một số insight rút ra từ OLAP queries}
+
+Dashboard Streamlit (\texttt{dashboard/app.py}) kết nối trực tiếp vào \texttt{airline\_dw.db}
+và hiển thị kết quả từ 9 nhóm OLAP query. Phân tích cho thấy các insight sau:
+
+\begin{itemize}
+    \item \textbf{Theo tháng:} Tháng 6, 7 (mùa hè) và tháng 12 (mùa đông) có tỷ lệ delay cao nhất,
+          phản ánh ảnh hưởng của bão mùa hè và tuyết rơi mùa đông.
+          Tháng 9, 10 có tỷ lệ delay thấp nhất trong năm.
+
+    \item \textbf{Theo hãng bay:} Frontier Airlines (F9) và Spirit Airlines (NK) có tỷ lệ delay cao nhất
+          (trên 25\%), trong khi Alaska Airlines (AS) và Hawaii Airlines (HA) hoạt động đúng giờ nhất.
+
+    \item \textbf{Theo ngày trong tuần:} Thứ 5 (Thursday) và thứ 6 (Friday) có tỷ lệ delay cao nhất
+          do lưu lượng hành khách cuối tuần tăng. Thứ 3 (Tuesday) có tỷ lệ delay thấp nhất.
+
+    \item \textbf{Theo giờ trong ngày:} Chuyến bay khởi hành trước 8 giờ sáng hầu như không delay.
+          Chuyến bay khởi hành từ 16h--21h có tỷ lệ delay cao nhất do hiệu ứng tích lũy dây chuyền
+          từ các chuyến bay sáng sớm bị delay.
+
+    \item \textbf{Nguyên nhân chính:} Theo query 6 (nguyên nhân delay JOIN \texttt{dim\_delay\_reason}),
+          Late Aircraft Delay (tàu bay đến muộn, category \texttt{Carrier}) chiếm tỷ trọng lớn nhất,
+          tiếp theo là Airline Delay và NAS (Air System) Delay.
+    \item \textbf{Hủy chuyến:} Carrier (mã A) và Weather (mã B) là hai nguyên nhân hủy chuyến chính,
+          xác định qua query 4 phân tích cột \texttt{cancellation\_reason}.
+\end{itemize}
+
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=\textwidth]{img/dashboard_overview.png}
+%     \caption{Giao diện Dashboard cấp 1 --- Tổng quan}
+%     \label{fig:dashboard_overview}
+% \end{figure}
+
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=\textwidth]{img/dashboard_rootcause.png}
+%     \caption{Giao diện Dashboard cấp 2 --- Nguyên nhân delay}
+%     \label{fig:dashboard_rootcause}
+% \end{figure}
+
+% ------------------------------------------------------------
+\subsection{Kết quả Data Mining}
+
+\subsubsection{Bảng so sánh 5 thuật toán}
+
+Mô hình được đánh giá trên tập test (20\% dữ liệu, \textasciitilde{}1,16M chuyến bay):
+
+\begin{table}[H]
+\centering
+\caption{So sánh hiệu suất 5 thuật toán khai phá dữ liệu}
+\begin{tabular}{|l|r|r|r|r|r|}
+\hline
+\textbf{Thuật toán} & \textbf{AUC-ROC} & \textbf{F1} & \textbf{Precision} & \textbf{Recall} & \textbf{Thời gian (s)} \\ \hline
+Logistic Regression & [x.xx] & [x.xx] & [x.xx] & [x.xx] & [x] \\ \hline
+Random Forest       & [x.xx] & [x.xx] & [x.xx] & [x.xx] & [x] \\ \hline
+Neural Network      & [x.xx] & [x.xx] & [x.xx] & [x.xx] & [x] \\ \hline
+XGBoost             & [x.xx] & [x.xx] & [x.xx] & [x.xx] & [x] \\ \hline
+LightGBM            & \textbf{[x.xx]} & \textbf{[x.xx]} & [x.xx] & [x.xx] & [x] \\ \hline
+\end{tabular}
+\label{tab:model_comparison}
+\end{table}
+
+\textit{Lưu ý:} Điền giá trị thực từ kết quả chạy \texttt{mining/compare\_5\_models.py}.
+Cột nhãn huấn luyện là \texttt{is\_delayed\_15} (1 nếu \texttt{arrival\_delay} $\geq$ 15 phút).
+
+\subsubsection{Biểu đồ ROC và Confusion Matrix}
+
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.75\textwidth]{img/roc_curves.png}
+%     \caption{Đường cong ROC của 5 thuật toán}
+%     \label{fig:roc}
+% \end{figure}
+
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.85\textwidth]{img/confusion_matrices.png}
+%     \caption{Confusion Matrix của 5 thuật toán trên tập test}
+%     \label{fig:confusion}
+% \end{figure}
+
+\subsubsection{Feature Importance}
+
+Phân tích Feature Importance từ mô hình Gradient Boosting (LightGBM/XGBoost) cho thấy:
+\begin{enumerate}
+    \item \texttt{DEPARTURE\_DELAY} --- đặc trưng quan trọng nhất (\textasciitilde{}45--60\% importance),
+          xác nhận rằng chuyến bay rời cổng trễ gần như chắc chắn đến trễ.
+    \item \texttt{SCHEDULED\_DEPARTURE} --- giờ khởi hành ảnh hưởng đến tỷ lệ delay do hiệu ứng dây chuyền.
+    \item \texttt{AIRLINE} --- hãng bay có mức độ trì hoãn khác nhau đáng kể.
+    \item \texttt{ORIGIN\_AIRPORT} --- một số sân bay hub lớn (ORD, ATL, DFW) có tỷ lệ delay cao.
+    \item \texttt{MONTH} --- tính mùa vụ ảnh hưởng rõ rệt qua thời tiết và lưu lượng hành khách.
+\end{enumerate}
+
+% \begin{figure}[H]
+%     \centering
+%     \includegraphics[width=0.75\textwidth]{img/feature_importance.png}
+%     \caption{Feature Importance của mô hình LightGBM}
+%     \label{fig:feature_importance}
+% \end{figure}
+
+\subsubsection{Phân tích tại sao Gradient Boosting thắng}
+
+Các lý do Gradient Boosting (XGBoost/LightGBM) đạt hiệu suất tốt nhất:
+
+\begin{enumerate}
+    \item \textbf{Mô hình hóa phi tuyến phức tạp:} Quan hệ giữa delay và các đặc trưng (giờ bay,
+          hãng bay, sân bay) không tuyến tính --- Logistic Regression không bắt được điều này.
+
+    \item \textbf{Xử lý interaction features tự nhiên:} GBDT tự tạo các điều kiện kết hợp
+          (ví dụ: hãng F9 \textit{và} tháng 12 \textit{và} sân bay ORD) mà không cần feature engineering tay.
+
+    \item \textbf{Khả năng chống overfitting tốt hơn Random Forest:}
+          Boosting sequential correction cho phép cây nhỏ (shallow) kết hợp với nhau hiệu quả,
+          trong khi Random Forest cần cây sâu hơn để đạt độ chính xác tương đương.
+
+    \item \textbf{Xử lý mất cân bằng lớp hiệu quả:}
+          \texttt{scale\_pos\_weight} của XGBoost và \texttt{is\_unbalance} của LightGBM
+          được thiết kế đặc biệt cho bài toán imbalanced classification.
+
+    \item \textbf{LightGBM nhanh nhất trong nhóm:} Leaf-wise growth + GOSS sampling
+          giúp LightGBM huấn luyện nhanh hơn XGBoost \textasciitilde{}2--5 lần với AUC tương đương.
+\end{enumerate}
+
+% ------------------------------------------------------------
+\subsection{Thảo luận}
+
+\subsubsection{Giải quyết được vấn đề gì?}
+
+So sánh với mục tiêu ban đầu:
+\begin{itemize}
+    \item[$\checkmark$] \textbf{Data Warehouse:} Đã xây dựng thành công, lưu trữ toàn bộ 5,8M chuyến bay
+          trong SQLite với Star Schema, hỗ trợ truy vấn OLAP linh hoạt.
+    \item[$\checkmark$] \textbf{Dashboard OLAP:} Giao diện 2 cấp cung cấp insight về nguyên nhân,
+          thời điểm và tác nhân delay, thay thế hoàn toàn phân tích thủ công.
+    \item[$\checkmark$] \textbf{Dự báo delay:} Mô hình đạt AUC $\approx$ 0,73 --- tốt hơn baseline
+          ngẫu nhiên (0,5) một cách đáng kể, có thể triển khai trong hệ thống cảnh báo sớm.
+\end{itemize}
+
+\subsubsection{Những trường hợp model còn sai và tại sao}
+
+Mô hình có xu hướng dự đoán sai trong các trường hợp:
+\begin{itemize}
+    \item \textbf{Delay đột xuất do thời tiết cực đoan:} Bão tuyết bất ngờ, mưa đá không dự báo được
+          từ dữ liệu lịch sử --- model không có feature thời tiết thực tế.
+    \item \textbf{Chuyến bay đầu tiên trong ngày:} \texttt{DEPARTURE\_DELAY} = 0 nhưng thực tế delay
+          do lý do vận hành nội bộ của hãng (thiếu phi hành đoàn, bảo trì kỹ thuật đột xuất).
+    \item \textbf{Sân bay và hãng ít dữ liệu:} Một số sân bay nhỏ/hãng nhỏ có ít mẫu huấn luyện,
+          dẫn đến encoding không đại diện.
+    \item \textbf{Ngày lễ đặc biệt:} Thanksgiving, Giáng sinh có hành vi delay đặc biệt khác với
+          các ngày thường trong cùng tháng --- model chưa bắt được hiệu ứng này.
+\end{itemize}

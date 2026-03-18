@@ -1,0 +1,166 @@
+% ============================================================
+% CHƯƠNG 2: CƠ SỞ LÝ THUYẾT
+% ============================================================
+\clearpage
+\section{Cơ sở lý thuyết}
+
+\subsection{Data Warehouse và OLAP}
+
+\subsubsection{Khái niệm Data Warehouse và Star Schema}
+
+\textbf{Data Warehouse (Kho dữ liệu)} là hệ thống lưu trữ dữ liệu tích hợp, hướng chủ đề (subject-oriented),
+không biến động (non-volatile) và biến thiên theo thời gian (time-variant), được thiết kế phục vụ cho mục đích
+phân tích và hỗ trợ ra quyết định \cite{inmon2005building}.
+Khác với cơ sở dữ liệu tác nghiệp (OLTP) tối ưu cho giao dịch nhanh,
+Data Warehouse được tối ưu cho các truy vấn phân tích phức tạp trên khối lượng dữ liệu lớn.
+
+\textbf{Star Schema} là mô hình tổ chức dữ liệu phổ biến nhất trong Data Warehouse,
+được đề xuất bởi Ralph Kimball \cite{kimball2013datawarehouse}.
+Cấu trúc bao gồm:
+\begin{itemize}
+    \item \textbf{Fact Table (Bảng sự kiện):} Lưu trữ các chỉ số đo lường định lượng (measures)
+          của sự kiện kinh doanh, ví dụ: thời gian delay, khoảng cách bay, số lượng chuyến bay.
+          Fact table chứa các khóa ngoại (foreign key) trỏ đến các bảng chiều.
+    \item \textbf{Dimension Tables (Bảng chiều):} Mô tả các thuộc tính ngữ cảnh của sự kiện
+          (hãng bay, sân bay, thời gian, địa lý). Mỗi bảng chiều liên kết trực tiếp với fact table,
+          tạo hình dạng ngôi sao đặc trưng.
+\end{itemize}
+
+So với \textbf{Snowflake Schema} --- biến thể chuẩn hóa của Star Schema trong đó các bảng chiều
+được phân rã thêm --- Star Schema có ưu điểm truy vấn đơn giản hơn (ít JOIN hơn),
+hiệu suất cao hơn cho các OLAP query, và dễ hiểu hơn với người dùng cuối,
+với đánh đổi là dư thừa dữ liệu (data redundancy) ở mức chấp nhận được.
+
+\subsubsection{OLAP và các phép phân tích đa chiều}
+
+\textbf{OLAP (Online Analytical Processing)} là công nghệ cho phép phân tích dữ liệu đa chiều
+một cách linh hoạt và tương tác \cite{codd1993olap}.
+Dữ liệu được tổ chức thành \textit{Data Cube} --- cấu trúc đa chiều cho phép xem xét dữ liệu
+từ nhiều góc độ khác nhau đồng thời.
+
+Các phép phân tích OLAP cơ bản bao gồm:
+\begin{itemize}
+    \item \textbf{Roll-up:} Tổng hợp dữ liệu lên mức cao hơn trong hệ thứ bậc,
+          ví dụ từ tháng $\rightarrow$ quý $\rightarrow$ năm.
+    \item \textbf{Drill-down:} Phân rã dữ liệu xuống mức chi tiết hơn,
+          ví dụ từ hãng bay $\rightarrow$ từng chuyến bay cụ thể.
+    \item \textbf{Slice:} Cắt lát Data Cube theo một giá trị cố định của một chiều,
+          ví dụ chỉ xem dữ liệu tháng 12.
+    \item \textbf{Dice:} Lọc Data Cube theo nhiều điều kiện đồng thời trên nhiều chiều.
+    \item \textbf{Pivot (Rotate):} Xoay trục nhìn của Data Cube để quan sát từ góc độ khác.
+\end{itemize}
+
+% ------------------------------------------------------------
+\subsection{Tiền xử lý dữ liệu}
+
+Tiền xử lý dữ liệu là bước quan trọng nhằm đảm bảo chất lượng dữ liệu đầu vào cho cả phân tích
+OLAP lẫn huấn luyện mô hình khai phá. Quy trình bao gồm bốn giai đoạn chính \cite{han2011datamining}:
+
+\subsubsection{Data Cleaning (Làm sạch dữ liệu)}
+
+Làm sạch dữ liệu xử lý ba vấn đề chính:
+\begin{itemize}
+    \item \textbf{Missing values (Giá trị thiếu):} Dữ liệu hàng không có thể thiếu thông tin
+          về thời gian delay khi chuyến bay bị hủy (CANCELLED = 1) hoặc chuyển hướng (DIVERTED = 1).
+          Chiến lược xử lý: điền giá trị 0 cho các cột delay khi chuyến bay bị hủy
+          (không có delay thực tế), loại bỏ bản ghi không xác định được nguyên nhân.
+    \item \textbf{Outliers (Giá trị ngoại lệ):} Các bản ghi có thời gian delay âm
+          (tàu bay đến sớm hơn dự kiến) hoặc cực lớn (>1000 phút) cần được kiểm tra và xử lý phù hợp.
+          Giá trị delay âm được giữ lại (tàu đến sớm) nhưng được clip ở ngưỡng hợp lý khi feature engineering.
+    \item \textbf{Inconsistency (Mâu thuẫn):} Kiểm tra tính nhất quán giữa các cột,
+          ví dụ tổng thời gian delay các thành phần phải xấp xỉ tổng delay thực tế (\texttt{ARRIVAL\_DELAY}).
+\end{itemize}
+
+\subsubsection{Data Integration (Tích hợp dữ liệu)}
+
+Tích hợp dữ liệu từ 3 nguồn CSV độc lập:
+\begin{itemize}
+    \item \texttt{flights.csv} $\leftarrow$ nguồn chính chứa sự kiện chuyến bay.
+    \item \texttt{airlines.csv} $\leftarrow$ tra cứu tên đầy đủ hãng bay từ mã IATA.
+    \item \texttt{airports.csv} $\leftarrow$ tra cứu thông tin sân bay (tên, thành phố, tiểu bang, tọa độ).
+\end{itemize}
+Quá trình tích hợp sử dụng lookup join trong quá trình ETL để điền thông tin
+vào các bảng chiều tương ứng, tránh lưu trùng lặp trong fact table.
+
+\subsubsection{Data Transformation (Biến đổi dữ liệu)}
+
+\begin{itemize}
+    \item \textbf{Normalization (Chuẩn hóa):} Các cột số học như \texttt{DEPARTURE\_DELAY},
+          \texttt{DISTANCE}, \texttt{SCHEDULED\_DEPARTURE} được chuẩn hóa về khoảng [0, 1]
+          hoặc chuẩn hóa z-score trước khi đưa vào mô hình học máy.
+    \item \textbf{Feature construction (Xây dựng đặc trưng mới):}
+          Tạo các đặc trưng dẫn xuất như: giờ khởi hành (0--23), tháng trong năm, ngày trong tuần,
+          nhãn phân loại \texttt{is\_delayed} (1 nếu \texttt{ARRIVAL\_DELAY} $\geq$ 15 phút, 0 nếu ngược lại).
+    \item \textbf{Encoding:} Các biến phân loại (mã hãng bay, mã sân bay) được mã hóa
+          bằng Label Encoding hoặc Target Encoding để phù hợp với đầu vào của các thuật toán.
+\end{itemize}
+
+\subsubsection{Data Reduction (Giảm chiều dữ liệu)}
+
+\begin{itemize}
+    \item \textbf{Attribute selection (Chọn lọc thuộc tính):} Từ 31 cột trong \texttt{flights.csv},
+          chọn ra 10 đặc trưng có thể biết \textit{trước khi} chuyến bay khởi hành để đảm bảo
+          mô hình có thể được sử dụng thực tế (không dùng thông tin rò rỉ tương lai).
+    \item \textbf{Sampling (Lấy mẫu):} Do mất cân bằng lớp (79\% không delay, 21\% delay),
+          áp dụng chiến lược class\_weight để cân bằng ảnh hưởng trong quá trình huấn luyện,
+          thay vì oversampling/undersampling vật lý để tránh tăng thời gian huấn luyện.
+\end{itemize}
+
+% ------------------------------------------------------------
+\subsection{Các thuật toán khai phá dữ liệu}
+
+\subsubsection{Logistic Regression}
+
+Logistic Regression là thuật toán phân loại tuyến tính cơ bản,
+mô hình hóa xác suất thuộc lớp dương theo hàm sigmoid:
+\[
+P(y=1 \mid \mathbf{x}) = \frac{1}{1 + e^{-(\mathbf{w}^T\mathbf{x} + b)}}
+\]
+Tham số $\mathbf{w}$ được tối ưu bằng Maximum Likelihood Estimation (MLE) với regularization L1/L2.
+Ưu điểm: nhanh, giải thích được qua hệ số $\mathbf{w}$, xác suất đầu ra calibrate tốt.
+Hạn chế: chỉ mô hình hóa được quan hệ tuyến tính.
+
+\subsubsection{Random Forest}
+
+Random Forest là phương pháp ensemble kết hợp nhiều Decision Tree \cite{breiman2001random}.
+Mỗi cây được huấn luyện trên bootstrap sample và chỉ xét ngẫu nhiên $\sqrt{d}$ đặc trưng tại mỗi node,
+làm giảm tương quan giữa các cây. Kết quả phân loại là majority vote của tất cả cây.
+Random Forest có khả năng bắt được quan hệ phi tuyến và cung cấp Feature Importance tự nhiên.
+
+\subsubsection{Neural Network (Mạng nơ-ron nhân tạo)}
+
+Mô hình Multilayer Perceptron (MLP) với các lớp fully-connected, hàm kích hoạt ReLU ở các lớp ẩn
+và sigmoid ở lớp đầu ra cho bài toán phân loại nhị phân.
+Mô hình được tối ưu bằng Adam optimizer với binary cross-entropy loss.
+Neural Network có khả năng học các biểu diễn đặc trưng phức tạp nhưng đòi hỏi nhiều dữ liệu
+và thời gian huấn luyện hơn.
+
+\subsubsection{Gradient Boosting: XGBoost và LightGBM}
+
+\textbf{XGBoost} \cite{chen2016xgboost} và \textbf{LightGBM} \cite{ke2017lightgbm} là hai triển khai
+hiệu quả của thuật toán Gradient Boosting Decision Trees (GBDT).
+Thuật toán xây dựng cây quyết định tuần tự, mỗi cây mới học để sửa lỗi của các cây trước:
+\[
+F_m(\mathbf{x}) = F_{m-1}(\mathbf{x}) + \eta \cdot h_m(\mathbf{x})
+\]
+trong đó $h_m$ là cây mới được tối ưu để giảm residual, $\eta$ là learning rate.
+LightGBM sử dụng Leaf-wise tree growth và Gradient-based One-Side Sampling (GOSS)
+giúp huấn luyện nhanh hơn XGBoost trên dữ liệu lớn.
+
+\subsubsection{Các chỉ số đánh giá}
+
+Với bài toán phân loại nhị phân có mất cân bằng lớp, các chỉ số đánh giá bao gồm:
+
+\begin{itemize}
+    \item \textbf{AUC-ROC:} Diện tích dưới đường ROC (Receiver Operating Characteristic),
+          đo khả năng phân biệt hai lớp bất kể ngưỡng quyết định. Giá trị từ 0,5 (ngẫu nhiên) đến 1 (hoàn hảo).
+    \item \textbf{F1-score:} Trung bình điều hòa của Precision và Recall:
+          $F_1 = 2 \cdot \frac{\text{Precision} \times \text{Recall}}{\text{Precision} + \text{Recall}}$
+    \item \textbf{Precision:} Tỷ lệ dự đoán delay đúng trong tổng số dự đoán delay.
+          $\text{Precision} = \frac{TP}{TP + FP}$
+    \item \textbf{Recall:} Tỷ lệ chuyến bay delay thực sự được phát hiện.
+          $\text{Recall} = \frac{TP}{TP + FN}$
+\end{itemize}
+
+Trong ngữ cảnh này, Recall quan trọng hơn Precision vì bỏ sót chuyến bay delay thực sự
+(False Negative) gây hại lớn hơn cảnh báo nhầm (False Positive).

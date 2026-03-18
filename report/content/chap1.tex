@@ -1,0 +1,101 @@
+% ============================================================
+% CHƯƠNG 1: TỔNG QUAN ĐỀ TÀI
+% ============================================================
+\section{Tổng quan đề tài}
+
+\subsection{Vấn đề đặt ra}
+
+\subsubsection{Thực trạng trì hoãn chuyến bay tại Mỹ năm 2015}
+
+Theo dữ liệu của Cục Hàng không Liên bang Mỹ (FAA), năm 2015 ghi nhận hơn 5,8 triệu chuyến bay nội địa,
+trong đó xấp xỉ 21\% bị trì hoãn (delay) với thời gian trễ trên 15 phút.
+Tình trạng này gây thiệt hại kinh tế ước tính hàng tỷ đô la mỗi năm, bao gồm chi phí nhiên liệu tăng thêm,
+bồi thường hành khách, và ảnh hưởng đến lịch trình của toàn bộ hệ thống hàng không.
+
+Các nguyên nhân chính gây delay được ghi nhận bao gồm:
+\begin{itemize}
+    \item \textbf{Thời tiết} (Weather Delay): Bão, sương mù, tuyết rơi ảnh hưởng đến tầm nhìn và khả năng cất hạ cánh.
+    \item \textbf{Hệ thống quản lý không lưu} (NAS Delay): Tắc nghẽn không phận, hạn chế đường bay.
+    \item \textbf{Vận hành của hãng hàng không} (Carrier Delay): Sự cố kỹ thuật, thiếu phi hành đoàn.
+    \item \textbf{Tàu bay đến muộn} (Late Aircraft Delay): Hệ quả dây chuyền từ chuyến bay trước bị delay.
+    \item \textbf{An ninh} (Security Delay): Kiểm tra an ninh kéo dài.
+\end{itemize}
+
+\subsubsection{Hạn chế của các phân tích thủ công truyền thống}
+
+Các phương pháp phân tích truyền thống dựa trên báo cáo tĩnh, bảng tính Excel hoặc truy vấn SQL đơn giản
+gặp phải nhiều hạn chế khi xử lý tập dữ liệu ở quy mô hàng triệu bản ghi:
+\begin{itemize}
+    \item Không thể phân tích đa chiều (theo hãng, sân bay, tháng, ngày trong tuần) một cách linh hoạt.
+    \item Thiếu khả năng phát hiện mẫu ẩn (hidden patterns) trong dữ liệu lớn.
+    \item Không dự báo được xác suất delay cho chuyến bay mới trước khi xảy ra.
+    \item Chi phí xử lý cao và thời gian phân tích kéo dài khi dữ liệu tăng lên.
+\end{itemize}
+
+\subsubsection{Nhu cầu có hệ thống phân tích tự động và dự báo}
+
+Để giải quyết bài toán trên, cần một hệ thống tích hợp có khả năng:
+\begin{enumerate}
+    \item Tự động thu thập, làm sạch và lưu trữ dữ liệu hàng không theo chuẩn Data Warehouse.
+    \item Cung cấp giao diện phân tích OLAP đa chiều, cho phép drill-down/roll-up theo nhiều chiều dữ liệu.
+    \item Áp dụng các thuật toán Machine Learning để dự báo khả năng delay của chuyến bay mới.
+\end{enumerate}
+
+% ------------------------------------------------------------
+\subsection{Mục tiêu}
+
+Đề tài hướng đến ba mục tiêu chính:
+
+\begin{enumerate}
+    \item \textbf{Xây dựng Data Warehouse chuẩn hóa dữ liệu hàng không:}
+    Thiết kế và triển khai kho dữ liệu theo mô hình Star Schema với bảng sự kiện \texttt{fact\_flights}
+    và các bảng chiều \texttt{dim\_airline}, \texttt{dim\_airport}, \texttt{dim\_date}, \texttt{dim\_time},
+    đảm bảo tính nhất quán và khả năng truy vấn hiệu quả.
+
+    \item \textbf{Cung cấp dashboard phân tích OLAP đa chiều:}
+    Xây dựng dashboard tương tác 2 cấp phân tích --- cấp tổng quan (tỷ lệ delay theo hãng, sân bay, tháng)
+    và cấp nguyên nhân (phân tích chi tiết từng loại delay) --- cho phép người dùng lọc động theo nhiều tiêu chí.
+
+    \item \textbf{Dự báo khả năng delay chuyến bay mới:}
+    So sánh và đánh giá 5 thuật toán phân loại (Logistic Regression, Random Forest, Neural Network,
+    XGBoost, LightGBM) trên cùng tập dữ liệu, chọn ra mô hình tốt nhất để dự báo delay.
+\end{enumerate}
+
+% ------------------------------------------------------------
+\subsection{Phạm vi}
+
+\paragraph{Dữ liệu:}
+Đề tài sử dụng bộ dữ liệu \textit{US Flight Delays 2015} công khai trên Kaggle \cite{kaggle2015},
+bao gồm ba file CSV:
+\begin{itemize}
+    \item \texttt{flights.csv}: 5.819.079 chuyến bay, 31 thuộc tính (thời gian, hãng bay, sân bay, các loại delay).
+    \item \texttt{airlines.csv}: Thông tin 14 hãng hàng không nội địa Hoa Kỳ.
+    \item \texttt{airports.csv}: Thông tin 322 sân bay (tên, thành phố, tiểu bang, tọa độ địa lý).
+\end{itemize}
+
+\paragraph{Thời gian và không gian:}
+Dữ liệu bao phủ toàn bộ năm 2015 (1/1/2015 -- 31/12/2015), chỉ bao gồm các chuyến bay nội địa Hoa Kỳ.
+Dữ liệu quốc tế và các năm khác nằm ngoài phạm vi của đề tài.
+
+% ------------------------------------------------------------
+\subsection{Đóng góp}
+
+Đề tài đạt được ba đóng góp kỹ thuật chính:
+
+\begin{enumerate}
+    \item \textbf{ETL pipeline tối ưu bộ nhớ:}
+    Pipeline xử lý dữ liệu theo kiểu streaming (chunk 100.000 dòng/lần) kết hợp tối ưu dtype
+    (float32/int8/int16 thay cho float64/int64) và vectorized transform với \texttt{numpy.select()},
+    cho phép nạp toàn bộ 5,8 triệu dòng vào SQLite với mức tiêu thụ RAM chỉ \textasciitilde{}120 MB/chunk,
+    thời gian ước tính 3--8 phút tùy tốc độ ổ đĩa.
+
+    \item \textbf{So sánh hệ thống 5 thuật toán Machine Learning:}
+    Xây dựng framework đánh giá thống nhất cho 5 thuật toán (Logistic Regression, Random Forest,
+    Neural Network, XGBoost, LightGBM) trên cùng tập train/test với các chỉ số AUC-ROC, F1,
+    Precision, Recall và thời gian huấn luyện, cho phép so sánh khách quan và toàn diện.
+
+    \item \textbf{Dashboard tương tác 2 cấp phân tích:}
+    Giao diện Streamlit 2 tab: (1) tổng quan với 4 KPI cards và biểu đồ theo hãng/sân bay/tháng/quý,
+    (2) phân tích nguyên nhân delay với pie chart, delay theo mùa và theo khung giờ bay.
+    Bộ lọc động 4 chiều: thời gian, hãng bay, sân bay đi (lọc theo bang), sân bay đến (lọc theo bang).
+\end{enumerate}

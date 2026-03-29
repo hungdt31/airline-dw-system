@@ -1,0 +1,97 @@
+\begin{figure}[H]
+  \centering
+  \resizebox{0.98\textwidth}{!}{%
+  \begin{tikzpicture}[
+    node distance=5mm,
+    font=\sffamily\footnotesize,
+    >={Latex[length=2.2mm]},
+    arr/.style={->, thick, draw=black!55},
+    csv/.style={
+      rectangle, rounded corners=2.5pt, draw=orange!75!black, line width=0.8pt,
+      minimum width=2.15cm, minimum height=0.62cm, align=center, inner sep=2pt,
+      font=\scriptsize
+    },
+    layer/.style={
+      rectangle, rounded corners=4pt, draw=blue!40!black, line width=0.9pt,
+      align=center, inner sep=6pt, text width=12.8cm
+    },
+    app/.style={
+      rectangle, rounded corners=4pt, draw=teal!45!black, line width=0.85pt,
+      align=left, inner sep=6pt, text width=5.85cm, minimum height=2.1cm
+    },
+    srcbox/.style={
+      rectangle, rounded corners=4pt, draw=orange!50!black, line width=0.7pt,
+      dashed, inner sep=6pt
+    },
+  ]
+  
+  % --- Ba file CSV ---
+  \node[csv] (csv_fl) {\textbf{flights.csv}};
+  \node[csv, right=4mm of csv_fl] (csv_al) {\textbf{airlines.csv}};
+  \node[csv, right=4mm of csv_al] (csv_ap) {\textbf{airports.csv}};
+  
+  % --- Khung bao + nhãn bên trong ---
+  \node[srcbox, fit=(csv_fl)(csv_al)(csv_ap),
+        label={[font=\scriptsize\itshape, text=black!60]above:Nguồn dữ liệu thô (Kaggle 2015)}
+  ] (srcframe) {};
+  
+  % --- ETL ---
+  \node[layer, below=10mm of srcframe.south] (etl) {%
+    \textbf{Tầng ETL (chuẩn hóa \& tích hợp)}\\[2pt]
+    {\scriptsize
+    Streaming theo chunk (\texttt{CHUNK\_SIZE}) $\rightarrow$
+    \texttt{etl/extract.py} $\rightarrow$ \texttt{etl/transform.py} $\rightarrow$ \texttt{etl/load.py};
+    điều phối bởi \texttt{pipeline.py}.}%
+  };
+  
+  % --- Ba mũi tên hội tụ vào etl.north ---
+  \draw[arr] (csv_fl.south) -- +(0,-3mm) -| (etl.north);
+  \draw[arr] (csv_al.south) -- (etl.north);
+  \draw[arr] (csv_ap.south) -- +(0,-3mm) -| (etl.north);
+  
+  % --- Data Warehouse ---
+  \node[layer, below=5mm of etl] (dw) {%
+    \textbf{Data Warehouse --- SQLite} \texttt{warehouse/airline\_dw.db}\\[2pt]
+    {\scriptsize
+    \textbf{Star Schema:} bảng sự kiện \texttt{fact\_flights};
+    bảng chiều \texttt{dim\_airline}, \texttt{dim\_airport},
+    \texttt{dim\_date}, \texttt{dim\_delay\_reason}.}%
+  };
+  \draw[arr] (etl.south) -- (dw.north);
+  
+  % --- Hai nhánh tiêu thụ ---
+  \node[app, below left=6mm and 2mm of dw.south west, anchor=north west] (dash) {%
+    \textbf{Dashboard phân tích (Streamlit)}\\[2pt]
+    {\scriptsize
+    Thư mục \texttt{dashboard/}: truy vấn SQL trực tiếp lên DW;
+    tổng quan KPI, phân tích tuyến, nguyên nhân delay,
+    explorer, dự báo (\texttt{predict\_service}).}%
+  };
+  
+  \node[app, below right=6mm and 2mm of dw.south east, anchor=north east] (mine) {%
+    \textbf{Khai phá dữ liệu (Data Mining)}\\[2pt]
+    {\scriptsize
+    Thư mục \texttt{mining/}: huấn luyện \& so sánh mô hình
+    (\texttt{compare\_5\_models.py}, \texttt{run\_models.py});
+    lưu artifact \texttt{.pkl};
+    báo cáo HTML \texttt{five\_models\_report.html}.}%
+  };
+  
+  \draw[arr] (dw.south) -- ++(0,-3mm) -| (dash.north);
+  \draw[arr] (dw.south) -- ++(0,-3mm) -| (mine.north);
+  
+  % --- Background ---
+  \begin{scope}[on background layer]
+    \node[
+      fill=gray!4, rounded corners=6pt, inner sep=10pt,
+      fit=(srcframe)(mine)(dash), draw=gray!25, dashed
+    ] {};
+  \end{scope}
+  
+  \end{tikzpicture}%
+  }
+  \caption{Sơ đồ ánh xạ hiện thực: tệp dữ liệu đầu vào, module ETL, cơ sở dữ liệu
+  triển khai và các thư mục mã nguồn tương ứng trong dự án.}
+  \label{fig:implementation_architecture}
+  \end{figure}
+

@@ -1,0 +1,115 @@
+\begin{figure}[H]
+  \centering
+  \resizebox{0.96\textwidth}{!}{%
+  \begin{tikzpicture}[
+    node distance=6mm,
+    font=\sffamily\footnotesize,
+    >={Latex[length=2.2mm]},
+    arr/.style={->, thick, draw=black!50},
+    t0/.style={
+      rectangle, rounded corners=5pt,
+      draw=orange!80!black, fill=orange!8,
+      line width=0.9pt, align=center,
+      inner sep=10pt, text width=10cm
+    },
+    t1/.style={
+      rectangle, rounded corners=5pt,
+      draw=blue!50!black, fill=blue!5,
+      line width=0.9pt, align=center,
+      inner sep=10pt, text width=10cm
+    },
+    t2/.style={
+      rectangle, rounded corners=5pt,
+      draw=violet!60!black, fill=violet!5,
+      line width=0.9pt, align=center,
+      inner sep=10pt, text width=10cm
+    },
+    t3/.style={
+      rectangle, rounded corners=5pt,
+      draw=teal!55!black, fill=teal!5,
+      line width=0.9pt, align=left,
+      inner sep=10pt, text width=4.5cm,
+      minimum height=2.6cm
+    },
+    lbl/.style={
+      font=\scriptsize\itshape, text=black!50,
+      align=right, text width=2.2cm
+    },
+  ]
+  
+  %% ── Tầng 0: Nguồn dữ liệu ──
+  \node[t0] (src) {%
+    \textbf{Nguồn dữ liệu thô}\\[3pt]
+    {\scriptsize
+    Tập dữ liệu chuyến bay Hoa Kỳ năm 2015 (Kaggle).
+    Gồm thông tin chuyến bay, hãng hàng không và sân bay.
+    Khoảng 5{,}8 triệu bản ghi, lưu dạng CSV chưa chuẩn hóa.}%
+  };
+  
+  %% ── Tầng 1: ETL ──
+  \node[t1, below=8mm of src] (etl) {%
+    \textbf{Tầng ETL --- Xử lý \& Tích hợp}\\[3pt]
+    {\scriptsize
+    Trích xuất từ CSV theo từng lô (chunk) để tiết kiệm bộ nhớ.
+    Làm sạch: loại bỏ giá trị thiếu, chuẩn hóa kiểu dữ liệu, mã hóa khóa ngoại.
+    Nạp dữ liệu đã xử lý vào kho theo luồng một chiều:
+    thô $\rightarrow$ sạch $\rightarrow$ kho.}%
+  };
+  \draw[arr] (src.south) -- (etl.north);
+  
+  %% ── Tầng 2: Data Warehouse ──
+  \node[t2, below=8mm of etl] (dw) {%
+    \textbf{Kho Dữ liệu (Data Warehouse)}\\[3pt]
+    {\scriptsize
+    Lưu trữ tích hợp, tổ chức theo \textbf{mô hình ngôi sao (Star Schema)}.
+    Bảng sự kiện trung tâm đo lường chuyến bay, liên kết bốn bảng chiều:
+    thời gian, hãng hàng không, sân bay và nguyên nhân delay.
+    Là điểm truy cập chung cho cả phân tích và khai phá.}%
+  };
+  \draw[arr] (etl.south) -- (dw.north);
+  
+  %% ── Tầng 3: đặt thủ công, căn giữa so với dw ──
+  %% dash bên trái, mine bên phải, khoảng cách tổng = 4.5+4.5+1cm = 10cm = text width dw
+  \node[t3, below=10mm of dw, xshift=-2.55cm] (dash) {%
+    \textbf{Phân tích \& Trình bày}\\[3pt]
+    {\scriptsize
+    Giao diện tương tác đa chiều: KPI tổng quan,
+    phân tích theo tuyến bay, nguyên nhân delay,
+    phân bố theo không gian và thời gian.
+    Tích hợp mô hình dự báo delay cho chuyến bay mới.}%
+  };
+  
+  \node[t3, right=10mm of dash] (mine) {%
+    \textbf{Khai phá Dữ liệu}\\[3pt]
+    {\scriptsize
+    Truy vấn mẫu huấn luyện từ kho dữ liệu.
+    Huấn luyện và so sánh năm thuật toán học máy.
+    Đánh giá theo AUC-ROC, F1, Log Loss;
+    xuất kết quả phục vụ báo cáo.}%
+  };
+  
+  %% Mũi tên từ DW xuống hai khối
+  \draw[arr] (dw.south) -- ++(0,-4mm) -| (dash.north);
+  \draw[arr] (dw.south) -- ++(0,-4mm) -| (mine.north);
+  
+  %% Mũi tên ngang bổ sung
+  \draw[dashed, black!30, thick, <->,
+        shorten >=1.5mm, shorten <=1.5mm]
+    (dash.east) --
+    node[above, font=\tiny\itshape, text=black!45] {chia sẻ kết quả}
+    (mine.west);
+  
+  %% ── Background ──
+  \begin{scope}[on background layer]
+    \node[
+      fill=gray!3, rounded corners=8pt, inner sep=14pt,
+      fit=(src)(etl)(dw)(dash)(mine),
+      draw=gray!20, dashed, line width=0.6pt
+    ] {};
+  \end{scope}
+  
+  \end{tikzpicture}%
+  }
+  \caption{Sơ đồ kiến trúc tổng quan hệ thống}
+  \label{fig:system_overview}
+  \end{figure}

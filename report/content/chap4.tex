@@ -3,6 +3,14 @@
 % ============================================================
 \clearpage
 \section{Hiện thực và thực nghiệm}
+\label{sec:implementation_experiment}
+
+\subsection{Sơ đồ ánh xạ hiện thực}
+
+Hình~\ref{fig:implementation_architecture} liên kết các thành phần đã mô tả ở thiết kế (Chương 3)
+với tệp dữ liệu đầu vào, mã nguồn ETL/Dashboard/Mining và cơ sở dữ liệu SQLite trong kho mã.
+
+\input{content/fig_implementation_architecture}
 
 \subsection{Môi trường thực nghiệm}
 
@@ -135,24 +143,28 @@ và hiển thị kết quả từ 9 nhóm OLAP query. Phân tích cho thấy cá
 
 \subsubsection{Bảng so sánh 5 thuật toán}
 
-Mô hình được đánh giá trên tập test (20\% dữ liệu, \textasciitilde{}1,16M chuyến bay):
+Mô hình được đánh giá trên tập test (20\% dữ liệu, $\approx$ 1,16M chuyến bay):
 
+\renewcommand{\arraystretch}{1.5}
 \begin{table}[H]
 \centering
 \caption{So sánh hiệu suất 5 thuật toán khai phá dữ liệu}
-\begin{tabular}{|l|r|r|r|r|r|}
+\vspace{5pt}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{|l|r|r|r|r|r|r|r|}
 \hline
-\textbf{Thuật toán} & \textbf{AUC-ROC} & \textbf{F1} & \textbf{Precision} & \textbf{Recall} & \textbf{Thời gian (s)} \\ \hline
-Logistic Regression & [x.xx] & [x.xx] & [x.xx] & [x.xx] & [x] \\ \hline
-Random Forest       & [x.xx] & [x.xx] & [x.xx] & [x.xx] & [x] \\ \hline
-Neural Network      & [x.xx] & [x.xx] & [x.xx] & [x.xx] & [x] \\ \hline
-XGBoost             & [x.xx] & [x.xx] & [x.xx] & [x.xx] & [x] \\ \hline
-LightGBM            & \textbf{[x.xx]} & \textbf{[x.xx]} & [x.xx] & [x.xx] & [x] \\ \hline
+\textbf{Thuật toán} & \textbf{AUC-ROC} & \textbf{Accuracy} & \textbf{F1-score} & \textbf{Avg Precision} & \textbf{Log Loss} & \textbf{Brier} & \textbf{TG train (s)} \\ \hline
+Logistic Regression & 0.6819 & 0.6451 & 0.6753 & 0.4287 & 0.6301 & 0.2201 & \textbf{2.4} \\ \hline
+Random Forest       & 0.7270 & 0.6457 & 0.6776 & 0.4618 & 0.6165 & 0.2142 & 12.8 \\ \hline
+Neural Network      & 0.7407 & \textbf{0.8165} & \textbf{0.7734} & 0.5102 & \textbf{0.4398} & \textbf{0.1387} & 22.4 \\ \hline
+XGBoost             & \textbf{0.7685} & 0.7115 & 0.7335 & \textbf{0.5517} & 0.5610 & 0.1900 & 7.5 \\ \hline
+LightGBM            & 0.7641 & 0.7072 & 0.7298 & 0.5445 & 0.5669 & 0.1924 & 4.1 \\ \hline
 \end{tabular}
 \label{tab:model_comparison}
 \end{table}
 
-\textit{Lưu ý:} Điền giá trị thực từ kết quả chạy \texttt{mining/compare\_5\_models.py}.
+\textit{Lưu ý:} Số liệu từ kết quả chạy \texttt{mining/compare\_5\_models.py}. Chữ đậm: giá trị tốt nhất từng cột (với Log Loss và Brier Score, \textit{thấp hơn} tốt hơn).
 Cột nhãn huấn luyện là \texttt{is\_delayed\_15} (1 nếu \texttt{arrival\_delay} $\geq$ 15 phút).
 
 \subsubsection{Biểu đồ ROC và Confusion Matrix}

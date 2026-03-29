@@ -149,18 +149,77 @@ giúp huấn luyện nhanh hơn XGBoost trên dữ liệu lớn.
 
 \subsubsection{Các chỉ số đánh giá}
 
-Với bài toán phân loại nhị phân có mất cân bằng lớp, các chỉ số đánh giá bao gồm:
+Với bài toán phân loại nhị phân có mất cân bằng lớp, các ký hiệu cơ bản được định nghĩa
+như sau: $TP$ (True Positive) là số chuyến bay delay được dự đoán đúng là delay;
+$TN$ (True Negative) là số chuyến bay đúng giờ được dự đoán đúng là đúng giờ;
+$FP$ (False Positive) là số chuyến bay đúng giờ bị dự đoán nhầm thành delay;
+$FN$ (False Negative) là số chuyến bay delay bị bỏ sót, dự đoán nhầm thành đúng giờ.
+Ngoài ra, $N$ là tổng số mẫu, $y_i \in \{0, 1\}$ là nhãn thực của mẫu thứ $i$,
+và $\hat{p}_i \in [0, 1]$ là xác suất dự đoán delay của mô hình cho mẫu đó.
+
+Các chỉ số đánh giá sử dụng trong nghiên cứu bao gồm:
 
 \begin{itemize}
-    \item \textbf{AUC-ROC:} Diện tích dưới đường ROC (Receiver Operating Characteristic),
-          đo khả năng phân biệt hai lớp bất kể ngưỡng quyết định. Giá trị từ 0,5 (ngẫu nhiên) đến 1 (hoàn hảo).
-    \item \textbf{F1-score:} Trung bình điều hòa của Precision và Recall:
-          $F_1 = 2 \cdot \frac{\text{Precision} \times \text{Recall}}{\text{Precision} + \text{Recall}}$
-    \item \textbf{Precision:} Tỷ lệ dự đoán delay đúng trong tổng số dự đoán delay.
-          $\text{Precision} = \frac{TP}{TP + FP}$
-    \item \textbf{Recall:} Tỷ lệ chuyến bay delay thực sự được phát hiện.
-          $\text{Recall} = \frac{TP}{TP + FN}$
+
+    \item \textbf{AUC-ROC} (Area Under the ROC Curve): Diện tích dưới đường ROC
+          (Receiver Operating Characteristic), đo khả năng mô hình phân biệt đúng
+          một mẫu delay so với một mẫu đúng giờ được chọn ngẫu nhiên, bất kể ngưỡng
+          quyết định. Giá trị từ 0{,}5 (tương đương đoán ngẫu nhiên) đến 1 (hoàn hảo).
+
+    \item \textbf{Accuracy:} Tỷ lệ dự đoán đúng trên tổng số mẫu:
+          \[
+            \text{Accuracy} = \frac{TP + TN}{TP + TN + FP + FN}
+          \]
+          Chỉ số này có thể gây hiểu nhầm khi dữ liệu mất cân bằng --- một mô hình
+          luôn dự đoán ``đúng giờ'' vẫn đạt Accuracy cao --- do đó cần kết hợp với
+          các chỉ số khác.
+
+    \item \textbf{F1-score:} Trung bình điều hòa của Precision
+          $\left(\frac{TP}{TP+FP}\right)$ và Recall $\left(\frac{TP}{TP+FN}\right)$,
+          phù hợp khi dữ liệu mất cân bằng:
+          \[
+            F_1 = 2 \cdot \frac{\text{Precision} \times \text{Recall}}%
+            {\text{Precision} + \text{Recall}}
+            = \frac{2\,TP}{2\,TP + FP + FN}
+          \]
+          Trong đó Precision là tỷ lệ dự đoán delay đúng trong tổng số dự đoán delay,
+          còn Recall là tỷ lệ chuyến bay delay thực sự được phát hiện.
+
+    \item \textbf{Average Precision} (AP): Diện tích dưới đường Precision--Recall,
+          tính trung bình có trọng số của Precision tại mỗi ngưỡng $k$:
+          \[
+            \text{AP} = \sum_{k} (R_k - R_{k-1}) \cdot P_k
+          \]
+          Trong đó $P_k$ và $R_k$ lần lượt là Precision và Recall tại ngưỡng thứ $k$,
+          còn $R_k - R_{k-1}$ là phần tăng thêm của Recall khi hạ ngưỡng từ bước
+          $k{-}1$ sang $k$. Chỉ số này nhạy cảm hơn AUC-ROC trong trường hợp lớp
+          dương (delay) chiếm thiểu số.
+
+    \item \textbf{Log Loss} (Cross-Entropy Loss): Đo độ lệch giữa xác suất dự đoán
+          và nhãn thực tế:
+          \[
+            \text{Log Loss} = -\frac{1}{N}\sum_{i=1}^{N}
+            \bigl[y_i \log \hat{p}_i + (1 - y_i)\log(1 - \hat{p}_i)\bigr]
+          \]
+          Số hạng $y_i \log \hat{p}_i$ phạt nặng khi mẫu thực sự delay ($y_i = 1$)
+          nhưng mô hình cho xác suất $\hat{p}_i$ thấp; số hạng $(1-y_i)\log(1-\hat{p}_i)$
+          phạt tương tự cho chiều ngược lại. Giá trị càng thấp càng tốt.
+
+    \item \textbf{Brier Score:} Trung bình bình phương sai lệch giữa xác suất dự đoán
+          và nhãn thực:
+          \[
+            \text{Brier} = \frac{1}{N}\sum_{i=1}^{N}(\hat{p}_i - y_i)^2
+          \]
+          Trong đó $(\hat{p}_i - y_i)^2$ đo mức độ lệch tuyệt đối của xác suất dự
+          đoán so với nhãn nhị phân thực tế của mẫu $i$. Giá trị từ 0 (hoàn hảo)
+          đến 1 (tệ nhất); bổ sung cho Log Loss bằng cách đánh giá độ chính xác
+          tuyệt đối của xác suất thay vì theo thang logarithm.
+
 \end{itemize}
 
-Trong ngữ cảnh này, Recall quan trọng hơn Precision vì bỏ sót chuyến bay delay thực sự
-(False Negative) gây hại lớn hơn cảnh báo nhầm (False Positive).
+Trong ngữ cảnh dự báo delay chuyến bay, AUC-ROC và Average Precision là hai chỉ số
+chính vì phản ánh hiệu suất phân loại độc lập với ngưỡng quyết định và phù hợp với
+dữ liệu mất cân bằng. Log Loss và Brier Score bổ sung để đánh giá chất lượng xác suất
+đầu ra --- quan trọng khi mô hình được dùng để ra quyết định theo mức độ rủi ro.
+Thời gian huấn luyện (TG train) được ghi nhận để so sánh hiệu quả tính toán giữa
+các thuật toán.

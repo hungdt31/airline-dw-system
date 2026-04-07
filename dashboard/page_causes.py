@@ -2,14 +2,119 @@
 Trang Nguyên nhân delay — pie, theo mùa, khung giờ.
 """
 
-from typing import Callable
+from typing import Callable, List, Optional
 
+import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 
 from config import BASE_JOIN
 from icons import CAUSES_HOUR, CAUSES_SEASON
 from sidebar import FilterContext
+
+# Trục tháng cố định (trùng dim_date / SQL) — ghép đủ 12 tháng tránh lệch category khi thiếu tháng
+_MONTH_TEMPLATE = pd.DataFrame(
+    {
+        "month": range(1, 13),
+        "month_name": [
+            "January",
+            "February",
+            "March",
+            "April",
+            "May",
+            "June",
+            "July",
+            "August",
+            "September",
+            "October",
+            "November",
+            "December",
+        ],
+    }
+)
+
+_SEASON_COLORS = {
+    "❄️ Đông": "#2471A3",
+    "🌸 Xuân": "#85C1E2",
+    "☀️ Hè": "#E74C3C",
+    "🍂 Thu": "#F5B7B1",
+}
+
+
+def _season_label(month: int) -> str:
+    if month in (12, 1, 2):
+        return "❄️ Đông"
+    if month in (3, 4, 5):
+        return "🌸 Xuân"
+    if month in (6, 7, 8):
+        return "☀️ Hè"
+    return "🍂 Thu"
+
+
+def _fig_avg_delay_by_month(df_season: pd.DataFrame) -> go.Figure:
+    """
+    Một trace Bar duy nhất (tránh px.bar + color tạo nhiều trace → chồng cột cuối trục).
+    Luôn 12 nhãn tháng; tháng không có dữ liệu: không vẽ cột (y=None), vẫn giữ khe trên trục X.
+    """
+    df_m = _MONTH_TEMPLATE.merge(
+        df_season[["month", "avg_delay"]].drop_duplicates("month"),
+        on="month",
+        how="left",
+    )
+    df_m["season"] = df_m["month"].map(_season_label)
+    has = df_m["avg_delay"].notna()
+    bar_colors: List[str] = [
+        _SEASON_COLORS[s] if h else "rgba(200,200,200,0.35)"
+        for s, h in zip(df_m["season"], has)
+    ]
+    y_vals: List[Optional[float]] = [
+        float(v) if pd.notna(v) else None for v in df_m["avg_delay"]
+    ]
+    customdata: List[str] = [
+        f"Delay TB: {v:.1f} phút" if pd.notna(v) else "Không có dữ liệu trong bộ lọc"
+        for v in df_m["avg_delay"]
+    ]
+    fig = go.Figure(
+        data=[
+            go.Bar(
+                x=df_m["month_name"],
+                y=y_vals,
+                marker=dict(color=bar_colors, line=dict(width=0)),
+                hovertemplate="%{x}<br>%{customdata}<extra></extra>",
+                customdata=customdata,
+                showlegend=False,
+            )
+        ]
+    )
+    seasons_used = set(df_m.loc[has, "season"])
+    for season, color in _SEASON_COLORS.items():
+        if season in seasons_used:
+            fig.add_trace(
+                go.Bar(
+                    x=[None],
+                    y=[None],
+                    name=season,
+                    marker=dict(color=color),
+                    showlegend=True,
+                    visible="legendonly",
+                )
+            )
+    month_order = df_m["month_name"].tolist()
+    fig.update_layout(
+        height=320,
+        margin=dict(t=10, b=10),
+        bargap=0.1,
+        xaxis=dict(
+            title="Tháng",
+            categoryorder="array",
+            categoryarray=month_order,
+            type="category",
+        ),
+        yaxis=dict(title="Delay TB (phút)"),
+        legend_title_text="Mùa",
+    )
+    return fig
 
 
 def render_page_causes(f: FilterContext, query: Callable[[str], object]) -> None:
@@ -81,14 +186,10 @@ def render_page_causes(f: FilterContext, query: Callable[[str], object]) -> None
             GROUP BY d.month, d.month_name ORDER BY d.month
         """)
         if not df_season.empty:
-            fig7 = px.bar(
-                df_season,
-                x="month_name",
-                y="avg_delay",
-                color="season",
-                labels={"avg_delay": "Delay TB (phút)", "month_name": "Tháng"},
+            df_season = df_season.sort_values("month", ascending=True).reset_index(
+                drop=True
             )
-            fig7.update_layout(height=320, margin=dict(t=10, b=10))
+            fig7 = _fig_avg_delay_by_month(df_season)
             st.plotly_chart(fig7, width='stretch')
     else:
         st.subheader(f"{CAUSES_SEASON} Delay trung bình theo quý")

@@ -16,6 +16,7 @@ BRAND = ":material/flight:"
 NAV_HOME = ":material/home:"
 NAV_ROUTES = ":material/map:"
 NAV_CAUSES = ":material/analytics:"
+NAV_TIME = ":material/schedule:"
 NAV_PREDICT = ":material/smart_toy:"
 NAV_EXPLORER = ":material/database:"
 

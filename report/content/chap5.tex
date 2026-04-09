@@ -13,7 +13,7 @@
 \begin{enumerate}
     \item \textbf{Data Warehouse chuẩn hóa:}
     Đã xây dựng thành công kho dữ liệu SQLite theo Star Schema với 1 fact table
-    (\texttt{fact\_flights}, \textasciitilde{}5,8M bản ghi), 5 dimension tables và 6 OLAP index.
+    (\texttt{fact\_flights}, \textasciitilde{}5,8M bản ghi), 4 bảng chiều và 6 chỉ mục OLAP.
     ETL pipeline streaming + tối ưu dtype (float32/int8) giữ RAM ổn định \textasciitilde{}120 MB/chunk,
     hoàn thành toàn bộ trong 3--8 phút.
 

@@ -1,0 +1,218 @@
+% ------------------------------------------------------------
+% Chi tiết hiện thực: mã nguồn, công nghệ, tham số (bổ sung Chương 3 kiến trúc)
+% ------------------------------------------------------------
+\subsection{Chi tiết hiện thực các thành phần}
+\label{subsec:implementation_components}
+
+Phần này bổ sung cho thiết kế kiến trúc ở Chương~\ref{sec:system_design}: ánh xạ thư mục/tệp,
+luồng ETL, lược đồ vật lý trong SQLite, truy vấn OLAP tham chiếu, dashboard và mô hình khai phá.
+
+\subsubsection{Ánh xạ tệp và công nghệ nền}
+
+\begin{itemize}
+  \item \textbf{Nguồn:} \texttt{data/flights.csv}, \texttt{data/airlines.csv}, \texttt{data/airports.csv}.
+  \item \textbf{ETL:} thư mục \texttt{etl/} (\texttt{extract.py}, \texttt{transform.py}, \texttt{load.py}),
+        điều phối bởi \texttt{pipeline.py}; ngôn ngữ Python 3.10+, thư viện \texttt{pandas}, \texttt{numpy}.
+  \item \textbf{Kho:} SQLite \texttt{warehouse/airline\_dw.db}, DDL trong \texttt{warehouse/schema.sql}.
+  \item \textbf{OLAP tham chiếu:} \texttt{queries/olap\_queries.sql} (9 nhóm truy vấn).
+  \item \textbf{Dashboard:} Streamlit + Plotly, điểm vào \texttt{dashboard/app.py}, các trang trong \texttt{dashboard/}.
+  \item \textbf{Khai phá:} thư mục \texttt{mining/} (huấn luyện, so sánh mô hình, artifact \texttt{.pkl}, báo cáo HTML).
+\end{itemize}
+
+% --- ETL ---
+\subsubsection{Pipeline ETL}
+
+Pipeline gồm 4 bước tuần tự trong \texttt{pipeline.py}:
+
+\paragraph{Bước 1 --- Đọc và transform dimension nhỏ.}
+\texttt{airlines.csv} và \texttt{airports.csv} đọc toàn bộ vào RAM; transform thành \texttt{dim\_airline}, \texttt{dim\_airport}
+qua \texttt{transform.py}. \texttt{flights.csv} được quét một lần với chunk lớn (300.000 dòng) để thu thập ngày duy nhất,
+rồi xây \texttt{dim\_date} bằng \texttt{pd.to\_datetime} vectorized.
+
+\paragraph{Bước 2 --- Khởi tạo schema.}
+Thực thi \texttt{warehouse/schema.sql} qua \texttt{conn.executescript()}. Tối ưu ghi SQLite:
+\begin{lstlisting}[language=SQL, caption={SQLite PRAGMA tối ưu ghi}]
+PRAGMA journal_mode = WAL;
+PRAGMA synchronous = NORMAL;
+\end{lstlisting}
+
+\paragraph{Bước 3 --- Nạp dimension và lookup maps.}
+Sau khi nạp các bảng chiều, pipeline truy vấn để xây dictionary ánh xạ surrogate key:
+\texttt{airline\_map}, \texttt{airport\_map}, \texttt{date\_map}, \texttt{delay\_reason\_map};
+dùng trong bước 4 với \texttt{pandas.Series.map()} (vectorized).
+
+\paragraph{Bước 4 --- Streaming \texttt{fact\_flights}.}
+Vòng lặp: đọc chunk $\rightarrow$ \texttt{transform\_chunk} $\rightarrow$ INSERT batch $\rightarrow$ giải phóng RAM.
+\begin{lstlisting}[language=Python, caption={Vòng lặp streaming trong \texttt{pipeline.py}}]
+CHUNK_SIZE   = 100_000   # row/chunk ~ 120 MB RAM
+INSERT_BATCH = 50_000    # row/INSERT into SQLite
+
+for chunk in stream_flights(chunksize=CHUNK_SIZE):
+    fact = transform_chunk(chunk, airline_map, airport_map,
+                           date_map, delay_reason_map)
+    del chunk
+    load_fact_flights(conn, fact, chunksize=INSERT_BATCH)
+    del fact
+\end{lstlisting}
+
+\paragraph{Tối ưu kiểu dữ liệu (\texttt{extract.py}).}
+Dùng \texttt{float32}/\texttt{int8}/\texttt{int16} thay mặc định \texttt{float64}/\texttt{int64} để giảm RAM mỗi chunk
+(khoảng 120~MB thay vì $\sim$300~MB với chunk 100\,000 dòng).
+
+\paragraph{Phân loại nguyên nhân trễ (vectorized).}
+Dùng \texttt{numpy.select} thay \texttt{apply} theo dòng:
+\begin{lstlisting}[language=Python, caption={\texttt{np.select} gán \texttt{delay\_reason\_key}}]
+conditions = [
+    df["WEATHER_DELAY"]       > 0,
+    df["AIR_SYSTEM_DELAY"]    > 0,
+    df["LATE_AIRCRAFT_DELAY"] > 0,
+    df["AIRLINE_DELAY"]       > 0,
+    df["SECURITY_DELAY"]      > 0,
+]
+df["delay_reason_key"] = np.select(
+    conditions, choices, default=delay_reason_map["NO_DELAY"]
+)
+\end{lstlisting}
+
+\paragraph{Chiến lược giá trị thiếu.}
+\begin{itemize}
+  \item Các cột delay: \texttt{fillna(0.0)} (\texttt{NaN} $\equiv$ không có trễ loại đó).
+  \item Bản ghi thiếu \texttt{AIRLINE}, \texttt{ORIGIN\_AIRPORT} hoặc \texttt{DESTINATION\_AIRPORT}: loại ở \texttt{extract.py}.
+  \item Không map được FK chiều: \texttt{dropna(subset=[...])} trong \texttt{transform\_chunk}.
+\end{itemize}
+
+% --- DW physical ---
+\subsubsection{Lược đồ vật lý và chỉ mục}
+
+Bảng~\ref{tab:fact_flights_impl} và Bảng~\ref{tab:dimensions_impl} mô tả chi tiết cột;
+toàn bộ DDL nằm trong \texttt{warehouse/schema.sql}.
+
+\begin{table}[H]
+\centering
+\caption{Cấu trúc bảng \texttt{fact\_flights} (hiện thực)}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Cột} & \textbf{Kiểu} & \textbf{Mô tả} \\ \hline
+\texttt{flight\_key}          & INTEGER PK AUTOINCREMENT & Surrogate key \\ \hline
+\texttt{airline\_key}         & INTEGER FK & $\rightarrow$ \texttt{dim\_airline} \\ \hline
+\texttt{origin\_airport\_key} & INTEGER FK & $\rightarrow$ \texttt{dim\_airport} \\ \hline
+\texttt{dest\_airport\_key}   & INTEGER FK & $\rightarrow$ \texttt{dim\_airport} \\ \hline
+\texttt{date\_key}            & INTEGER FK & $\rightarrow$ \texttt{dim\_date} (YYYYMMDD) \\ \hline
+\texttt{delay\_reason\_key}   & INTEGER FK & $\rightarrow$ \texttt{dim\_delay\_reason} \\ \hline
+\texttt{flight\_number}       & TEXT & Degenerate dimension \\ \hline
+\texttt{tail\_number}         & TEXT & Degenerate dimension \\ \hline
+\texttt{scheduled\_departure} & TEXT & Giờ dự kiến (HHMM) \\ \hline
+\texttt{departure\_delay}     & REAL & Trễ khởi hành (phút) \\ \hline
+\texttt{arrival\_delay}       & REAL & Trễ đến (phút) \\ \hline
+\texttt{elapsed\_time}        & REAL & Thời gian bay thực tế (phút) \\ \hline
+\texttt{distance}             & REAL & Khoảng cách (dặm) \\ \hline
+\texttt{delay\_air\_system}   & REAL & Trễ NAS (phút) \\ \hline
+\texttt{delay\_security}      & REAL & Trễ an ninh (phút) \\ \hline
+\texttt{delay\_airline}       & REAL & Trễ hãng (phút) \\ \hline
+\texttt{delay\_late\_aircraft}& REAL & Trễ tàu bay đến muộn (phút) \\ \hline
+\texttt{delay\_weather}       & REAL & Trễ thời tiết (phút) \\ \hline
+\texttt{is\_cancelled}        & INTEGER & Cờ hủy (0/1) \\ \hline
+\texttt{cancellation\_reason} & TEXT & Mã lý do hủy (A/B/C/D) \\ \hline
+\texttt{is\_diverted}         & INTEGER & Cờ chuyển hướng (0/1) \\ \hline
+\texttt{is\_delayed\_15}      & INTEGER & 1 nếu \texttt{arrival\_delay} $\geq 15$ phút \\ \hline
+\end{tabular}
+\label{tab:fact_flights_impl}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Các bảng chiều (hiện thực)}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Bảng} & \textbf{Bản ghi} & \textbf{Cột chính} \\ \hline
+\texttt{dim\_airline}       & 14  & \texttt{airline\_key} (PK), \texttt{airline\_iata} (UNIQUE), \texttt{airline\_name} \\ \hline
+\texttt{dim\_airport}       & 322 & \texttt{airport\_key} (PK), IATA, thành phố, bang, quốc gia, lat/lon \\ \hline
+\texttt{dim\_date}          & 365 & \texttt{date\_key}, năm, quý, tháng, tuần, thứ, cuối tuần \\ \hline
+\texttt{dim\_delay\_reason} & 6   & \texttt{reason\_key}, mã, tên, nhóm (Operational/Carrier/Weather/None) \\ \hline
+\end{tabular}
+\label{tab:dimensions_impl}
+\end{table}
+
+\texttt{dim\_delay\_reason} gồm các mã ví dụ:
+\texttt{AIR\_SYSTEM}, \texttt{SECURITY}, \texttt{AIRLINE}, \texttt{LATE\_AIRCRAFT}, \texttt{WEATHER}, \texttt{NO\_DELAY}.
+
+\begin{lstlisting}[language=SQL, caption={Chỉ mục hỗ trợ OLAP trên \texttt{fact\_flights}}]
+CREATE INDEX idx_fact_airline   ON fact_flights(airline_key);
+CREATE INDEX idx_fact_origin    ON fact_flights(origin_airport_key);
+CREATE INDEX idx_fact_dest      ON fact_flights(dest_airport_key);
+CREATE INDEX idx_fact_date      ON fact_flights(date_key);
+CREATE INDEX idx_fact_cancelled ON fact_flights(is_cancelled);
+CREATE INDEX idx_fact_delayed   ON fact_flights(is_delayed_15);
+\end{lstlisting}
+
+\subsubsection{Bộ truy vấn OLAP tham chiếu (\texttt{olap\_queries.sql})}
+
+\begin{enumerate}
+  \item Tổng chuyến theo tháng/quý/năm; tỷ lệ delay, tỷ lệ hủy.
+  \item Top 5 hãng nhiều chuyến; số hủy và tỷ lệ hủy.
+  \item OTP theo hãng; delay trung bình theo hãng.
+  \item Tỷ lệ hủy theo nguyên nhân (A/B/C/D) với phần trăm cửa sổ.
+  \item Delay trung bình theo sân bay đi/đến (top 10, lọc số chuyến).
+  \item Nguyên nhân trễ và delay trung bình (JOIN \texttt{dim\_delay\_reason}).
+  \item Xu hướng delay theo tháng/mùa (\texttt{CASE WHEN} mùa).
+  \item Delay theo khung giờ khởi hành (4 slot từ HHMM).
+  \item Top 5 sân bay tỷ lệ gián đoạn cao (hủy + trễ $\geq 15$), lọc khối lượng.
+\end{enumerate}
+
+\subsubsection{Dashboard Streamlit}
+
+Khởi chạy: \texttt{streamlit run dashboard/app.py}.
+Điều hướng đa trang: \texttt{st.sidebar.radio}; các module
+\texttt{page\_overview.py}, \texttt{page\_routes.py}, \texttt{page\_time.py},
+\texttt{page\_causes.py}, \texttt{page\_predict.py}, \texttt{page\_explorer.py}.
+
+\begin{itemize}
+  \item \textbf{Tổng quan:} KPI (\texttt{st.metric}), biểu đồ Plotly theo tháng/quý, top hãng/sân bay.
+  \item \textbf{Tuyến đường:} lọc bang/sân bay trên trang; top tuyến theo hãng chọn ở sidebar.
+  \item \textbf{Thời gian:} heatmap tháng $\times$ nguyên nhân; delay TB theo tháng/mùa hoặc quý;
+        delay theo \textbf{thứ trong tuần} và cuối tuần so với ngày thường; khung giờ cất cánh theo lịch.
+  \item \textbf{Nguyên nhân:} pie/bar và bảng tóm tắt theo \texttt{dim\_delay\_reason}, tổng phút trễ theo loại.
+  \item \textbf{Dự báo:} form đặc trưng, gọi \texttt{predict\_service}; không dùng bộ lọc OLAP sidebar.
+  \item \textbf{Explorer:} sơ đồ star, thống kê dòng, SQL tùy chỉnh (chỉ \texttt{SELECT}).
+\end{itemize}
+
+Bộ lọc toàn cục: \texttt{FilterContext} trong \texttt{sidebar.py} (\texttt{where(*extra)}),
+\texttt{time\_filter}, lọc hãng IATA; trang tuyến đồng bộ \texttt{session\_state} khi đổi bang.
+\texttt{db.py}: \texttt{query()} với \texttt{@st.cache\_data(ttl=300)}; kết nối \texttt{@st.cache\_resource}.
+
+\subsubsection{Mô hình khai phá: đặc trưng và tham số}
+
+Nhãn: \texttt{is\_delayed\_15}. Chỉ dùng thông tin biết trước khi hạ cánh.
+
+\begin{table}[H]
+\centering
+\caption{Mười đặc trưng đầu vào (hiện thực)}
+\small
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Đặc trưng} & \textbf{Kiểu} & \textbf{Lý do chọn} \\ \hline
+\texttt{MONTH}                & int8  & Mùa vụ \\ \hline
+\texttt{DAY\_OF\_WEEK}        & int8  & Thứ trong tuần \\ \hline
+\texttt{SCHEDULED\_DEPARTURE} & float32 & Giờ cất dự kiến \\ \hline
+\texttt{AIRLINE} (encoded)    & int   & Hãng \\ \hline
+\texttt{ORIGIN\_AIRPORT} (encoded) & int & Sân bay đi \\ \hline
+\texttt{DEST\_AIRPORT} (encoded) & int & Sân bay đến \\ \hline
+\texttt{DISTANCE}             & float32 & Quãng đường \\ \hline
+\texttt{SCHEDULED\_TIME}      & int   & Block time \\ \hline
+\texttt{DEPARTURE\_DELAY}     & float32 & Trễ khởi hành \\ \hline
+\texttt{HOUR\_OF\_DAY}        & int8  & Giờ trong ngày (0--23) \\ \hline
+\end{tabular}
+\label{tab:features_impl}
+\end{table}
+
+Tham số huấn luyện tiêu biểu:
+\begin{itemize}
+  \item Logistic Regression: \texttt{lbfgs}, C=1.0, \texttt{class\_weight='balanced'}.
+  \item Random Forest: 100 cây, \texttt{max\_depth=10}, \texttt{min\_samples\_leaf=50}, \texttt{class\_weight='balanced'}.
+  \item MLP: [10$\to$64$\to$32$\to$1], ReLU, Dropout(0.3), Adam lr=0.001, batch 2048, 20 epoch.
+  \item XGBoost: 300 cây, \texttt{max\_depth=6}, \texttt{lr=0.1}, \texttt{scale\_pos\_weight=3.76}.
+  \item LightGBM: 300 cây, \texttt{num\_leaves=63}, \texttt{lr=0.1}, \texttt{is\_unbalance=True}.
+\end{itemize}
+
+Mất cân bằng lớp ($\sim$79\% / 21\%): dùng trọng số lớp thay vì over/undersampling vật lý;
+đánh giá ưu tiên AUC-ROC và F1.

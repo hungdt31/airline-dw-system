@@ -217,6 +217,42 @@ Các chỉ số đánh giá sử dụng trong nghiên cứu bao gồm:
 
 \end{itemize}
 
+\subsubsection{Phân tích các chỉ số dựa trên tập dữ liệu}
+
+Để đánh giá đặc tính của tập dữ liệu, tiến hành phân tích phân bố nhãn
+dựa trên tiêu chí chuyến bay bị trễ khi \texttt{ARRIVAL\_DELAY} $\geq$ 15 phút.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\linewidth]{img/imbalance_analysis.png}
+\caption{Phân bố nhãn và minh họa ảnh hưởng của dữ liệu mất cân bằng đến mô hình}
+\label{fig:imbalance}
+\end{figure}
+
+Kết quả cho thấy:
+\begin{itemize}
+    \item Lớp \textbf{không trễ (On-time)} chiếm khoảng 78.82\%.
+    \item Lớp \textbf{trễ (Delayed)} chiếm khoảng 21.18\%.
+    \item Tỷ lệ mất cân bằng (Imbalance Ratio) xấp xỉ 3.72:1.
+\end{itemize}
+
+Sự chênh lệch này cho thấy bài toán có tính chất \textbf{dữ liệu mất cân bằng},
+trong đó lớp ``không trễ'' chiếm ưu thế đáng kể.
+
+Để minh họa ảnh hưởng của hiện tượng này, một mô hình cơ sở (baseline)
+được xây dựng với chiến lược đơn giản: luôn dự đoán tất cả chuyến bay là ``không trễ''.
+Kết quả cho thấy mô hình vẫn đạt \textbf{Accuracy} cao (78.8\%),
+tuy nhiên hoàn toàn thất bại trong việc phát hiện các chuyến bay bị trễ,
+với \textbf{Recall = 0\%} và \textbf{AUC-ROC = 0.50} (tương đương đoán ngẫu nhiên).
+
+Điều này chứng tỏ rằng \textbf{Accuracy không phải là chỉ số phù hợp}
+trong bối cảnh dữ liệu mất cân bằng. Do đó, các chỉ số như
+\textbf{AUC-ROC}, \textbf{F1-score} và \textbf{Average Precision}
+được ưu tiên sử dụng để đánh giá hiệu năng mô hình trong nghiên cứu này.
+
+Việc phân tích phân bố dữ liệu trước khi huấn luyện mô hình là cần thiết,
+nhằm lựa chọn chiến lược đánh giá và xử lý phù hợp với đặc tính dữ liệu.
+
 Trong ngữ cảnh dự báo delay chuyến bay, AUC-ROC và Average Precision là hai chỉ số
 chính vì phản ánh hiệu suất phân loại độc lập với ngưỡng quyết định và phù hợp với
 dữ liệu mất cân bằng. Log Loss và Brier Score bổ sung để đánh giá chất lượng xác suất

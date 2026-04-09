@@ -17,6 +17,7 @@ from icons import (
     NAV_HOME,
     NAV_PREDICT,
     NAV_ROUTES,
+    NAV_TIME,
     SECTION_AIRLINE,
     SECTION_CALENDAR,
     SECTION_FILTERS,
@@ -26,6 +27,7 @@ from icons import (
 APP_PAGES: List[Tuple[str, str]] = [
     ("home", f"{NAV_HOME} Tổng quan"),
     ("routes", f"{NAV_ROUTES} Phân tích tuyến đường"),
+    ("time", f"{NAV_TIME} Phân tích thời gian"),
     ("causes", f"{NAV_CAUSES} Phân tích nguyên nhân"),
     ("predict", f"{NAV_PREDICT} Dự báo chuyến bay"),
     ("explorer", f"{NAV_EXPLORER} Database Explorer"),
@@ -34,6 +36,7 @@ APP_PAGES: List[Tuple[str, str]] = [
 PAGE_MAIN_TITLES: Dict[str, str] = {
     "home": f"{NAV_HOME} Tổng quan — Airline Data Warehouse 2015",
     "routes": f"{NAV_ROUTES} Phân tích tuyến đường",
+    "time": f"{NAV_TIME} Phân tích thời gian",
     "causes": f"{NAV_CAUSES} Phân tích nguyên nhân",
     "predict": f"{NAV_PREDICT} Dự báo chuyến bay",
     "explorer": f"{NAV_EXPLORER} Database Explorer",
@@ -172,7 +175,7 @@ def render_app_sidebar(query: Callable[[str], pd.DataFrame]) -> Tuple[str, Filte
     st.sidebar.markdown("---")
     st.sidebar.markdown(f"### {SECTION_FILTERS} Bộ lọc toàn cục")
     st.sidebar.caption(
-        "Áp dụng: Tổng quan, Phân tích tuyến, Nguyên nhân. "
+        "Áp dụng: Tổng quan, Phân tích tuyến, Phân tích thời gian, Nguyên nhân. "
         "Không áp dụng: Dự báo, Database Explorer."
     )
 

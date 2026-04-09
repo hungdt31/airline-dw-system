@@ -24,6 +24,7 @@ from sidebar import PAGE_MAIN_TITLES, inject_dashboard_styles, render_app_sideba
 from page_causes import render_page_causes
 from page_overview import render_page_overview
 from page_predict import render_page_predict
+from page_time import render_page_time
 
 st.set_page_config(
     page_title="Airline DW Analytics",
@@ -40,6 +41,8 @@ st.title(PAGE_MAIN_TITLES[page_id])
 
 if page_id == "home":
     render_page_overview(filters, query)
+elif page_id == "time":
+    render_page_time(filters, query)
 elif page_id == "causes":
     render_page_causes(filters, query)
 elif page_id == "routes":

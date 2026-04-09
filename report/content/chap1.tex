@@ -5,13 +5,12 @@
 
 \subsection{Vấn đề đặt ra}
 
-\subsubsection{Thực trạng trì hoãn chuyến bay tại Mỹ năm 2015}
+\subsubsection{Bối cảnh trì hoãn chuyến bay nội địa Hoa Kỳ năm 2015}
 
-Theo dữ liệu của Cục Hàng không Liên bang Mỹ (FAA), năm 2015 ghi nhận hơn 5,8 triệu chuyến bay nội địa,
-trong đó xấp xỉ 21\% bị trì hoãn (delay) với thời gian trễ trên 15 phút.
-Tình trạng này gây thiệt hại kinh tế ước tính hàng tỷ đô la mỗi năm, bao gồm chi phí nhiên liệu tăng thêm,
-bồi thường hành khách, và ảnh hưởng đến lịch trình của toàn bộ hệ thống hàng không.
-
+\indent Theo thống kê từ dữ liệu hàng không công khai (Bộ Giao thông Hoa Kỳ / các bộ dữ liệu tổng hợp như trên Kaggle),
+năm 2015 ghi nhận khoảng 5{,}8 triệu chuyến bay nội địa, trong đó một tỷ lệ đáng kể chuyến bay bị trì hoãn
+theo tiêu chí trễ đến từ 15 phút trở lên. Tình trạng này gắn với chi phí vận hành, trải nghiệm hành khách
+và hiệu ứng dây chuyền trên mạng lưới.
 Các nguyên nhân chính gây delay được ghi nhận bao gồm:
 \begin{itemize}
     \item \textbf{Thời tiết} (Weather Delay): Bão, sương mù, tuyết rơi ảnh hưởng đến tầm nhìn và khả năng cất hạ cánh.
@@ -36,66 +35,53 @@ gặp phải nhiều hạn chế khi xử lý tập dữ liệu ở quy mô hàn
 
 Để giải quyết bài toán trên, cần một hệ thống tích hợp có khả năng:
 \begin{enumerate}
-    \item Tự động thu thập, làm sạch và lưu trữ dữ liệu hàng không theo chuẩn Data Warehouse.
-    \item Cung cấp giao diện phân tích OLAP đa chiều, cho phép drill-down/roll-up theo nhiều chiều dữ liệu.
-    \item Áp dụng các thuật toán Machine Learning để dự báo khả năng delay của chuyến bay mới.
+    \item \textbf{Tự động hóa quy trình dữ liệu:} Thu thập, làm sạch và lưu trữ dữ liệu hàng không theo chuẩn Data Warehouse, đảm bảo tính nhất quán và khả năng mở rộng.
+    \item \textbf{Phân tích dữ liệu đa chiều (OLAP):} Cung cấp giao diện trực quan, hỗ trợ người dùng phân tích chi tiết (drill-down) và tổng hợp dữ liệu (roll-up) linh hoạt theo nhiều chiều khác nhau.
+    \item \textbf{Khai phá dữ liệu mới:} Ứng dụng các thuật toán học máy để dự đoán xác suất delay của các chuyến bay mới, hỗ trợ ra quyết định kịp thời và chính xác.
 \end{enumerate}
 
 % ------------------------------------------------------------
 \subsection{Mục tiêu}
 
-Đề tài hướng đến ba mục tiêu chính:
+Đề tài hướng đến ba mục tiêu cốt lõi, tương ứng với các thành phần chính của hệ thống:
 
 \begin{enumerate}
-    \item \textbf{Xây dựng Data Warehouse chuẩn hóa dữ liệu hàng không:}
-    Thiết kế và triển khai kho dữ liệu theo mô hình Star Schema với bảng sự kiện \texttt{fact\_flights}
-    và các bảng chiều \texttt{dim\_airline}, \texttt{dim\_airport}, \texttt{dim\_date}, \texttt{dim\_time},
-    đảm bảo tính nhất quán và khả năng truy vấn hiệu quả.
+    \item \textbf{Xây dựng kho dữ liệu (Data Warehouse) cho dữ liệu hàng không:}  
+    Thiết kế và triển khai kho dữ liệu theo mô hình \textit{Star Schema}, bao gồm bảng sự kiện \texttt{fact\_flights} và các bảng chiều \texttt{dim\_airline}, \texttt{dim\_airport}, \texttt{dim\_date}, \texttt{dim\_time}. Hệ thống đảm bảo tính nhất quán dữ liệu, tối ưu hóa hiệu năng truy vấn và hỗ trợ phân tích đa chiều hiệu quả.
 
-    \item \textbf{Cung cấp dashboard phân tích OLAP đa chiều:}
-    Xây dựng dashboard tương tác 2 cấp phân tích --- cấp tổng quan (tỷ lệ delay theo hãng, sân bay, tháng)
-    và cấp nguyên nhân (phân tích chi tiết từng loại delay) --- cho phép người dùng lọc động theo nhiều tiêu chí.
+    \item \textbf{Phát triển Dashboard phân tích OLAP:}  
+    Xây dựng ứng dụng trực quan hóa dữ liệu tương tác theo hướng \textbf{đa trang}, bao gồm: tổng quan chỉ số, phân tích theo tuyến bay và địa lý, phân tích theo thời gian (tháng/mùa, thứ trong tuần, khung giờ), phân tích nguyên nhân chậm chuyến, tra cứu dữ liệu trong kho và tích hợp màn hình dự báo. Hệ thống hỗ trợ các thao tác \textit{drill-down} (phân tích chi tiết) và \textit{roll-up} (tổng hợp dữ liệu), cùng với bộ lọc động theo thời gian (tháng/quý), hãng hàng không và yếu tố địa lý.
 
-    \item \textbf{Dự báo khả năng delay chuyến bay mới:}
-    So sánh và đánh giá 5 thuật toán phân loại (Logistic Regression, Random Forest, Neural Network,
-    XGBoost, LightGBM) trên cùng tập dữ liệu, chọn ra mô hình tốt nhất để dự báo delay.
+    \item \textbf{Xây dựng mô hình dự báo chậm chuyến bay:}  
+    Triển khai và so sánh hiệu năng của năm thuật toán học máy gồm Logistic Regression, Random Forest, Neural Network, XGBoost và LightGBM trên cùng một pipeline xử lý đặc trưng. Bài toán được xây dựng dưới dạng phân loại với nhãn chậm chuyến theo ngưỡng 15 phút, và được đánh giá bằng các chỉ số phù hợp với dữ liệu mất cân bằng.
 \end{enumerate}
 
 % ------------------------------------------------------------
-\subsection{Phạm vi}
+\subsection{Phạm vi và giới hạn}
 
-\paragraph{Dữ liệu:}
-Đề tài sử dụng bộ dữ liệu \textit{US Flight Delays 2015} công khai trên Kaggle \cite{kaggle2015},
-bao gồm ba file CSV:
+\subsubsection{Dữ liệu}
+Đề tài sử dụng bộ dữ liệu công khai \textit{US Flight Delays 2015} trên Kaggle \cite{kaggle2015}, bao gồm ba tập tin CSV chính:
 \begin{itemize}
-    \item \texttt{flights.csv}: 5.819.079 chuyến bay, 31 thuộc tính (thời gian, hãng bay, sân bay, các loại delay).
-    \item \texttt{airlines.csv}: Thông tin 14 hãng hàng không nội địa Hoa Kỳ.
-    \item \texttt{airports.csv}: Thông tin 322 sân bay (tên, thành phố, tiểu bang, tọa độ địa lý).
+    \item \texttt{flights.csv}: Gồm 5.819.079 bản ghi chuyến bay với 31 thuộc tính, bao quát thông tin về thời gian, hãng hàng không, sân bay và các loại chậm trễ.
+    \item \texttt{airlines.csv}: Cung cấp thông tin của 14 hãng hàng không nội địa Hoa Kỳ.
+    \item \texttt{airports.csv}: Bao gồm dữ liệu của 322 sân bay, như tên, vị trí (thành phố, tiểu bang) và tọa độ địa lý.
 \end{itemize}
 
-\paragraph{Thời gian và không gian:}
-Dữ liệu bao phủ toàn bộ năm 2015 (1/1/2015 -- 31/12/2015), chỉ bao gồm các chuyến bay nội địa Hoa Kỳ.
-Dữ liệu quốc tế và các năm khác nằm ngoài phạm vi của đề tài.
+\subsubsection{Thời gian và không gian}
+Phạm vi nghiên cứu được giới hạn trong các chuyến bay nội địa tại Hoa Kỳ trong năm 2015 (từ 01/01/2015 đến 31/12/2015). Các dữ liệu ngoài giai đoạn này, chuyến bay quốc tế hoặc dữ liệu thời tiết thời gian thực không được xem xét trong đề tài.
+
+\subsubsection{Phạm vi kỹ thuật}
+Đồ án tập trung vào việc \textbf{xây dựng và minh chứng quy trình} bao gồm quy trình xử lý dữ liệu (Extract - Transform - Load), kho dữ liệu, truy vấn OLAP, trực quan hóa dashboard và huấn luyện mô hình học máy trong môi trường phát triển. Các thành phần của hệ thống vận hành thực tế như tích hợp hệ thống đặt vé, API thời gian thực hoặc triển khai production chưa nằm trong phạm vi thực hiện.
 
 % ------------------------------------------------------------
-\subsection{Đóng góp}
+\subsection{Cấu trúc báo cáo}
 
-Đề tài đạt được ba đóng góp kỹ thuật chính:
+Nội dung báo cáo được tổ chức như sau:
 
-\begin{enumerate}
-    \item \textbf{ETL pipeline tối ưu bộ nhớ:}
-    Pipeline xử lý dữ liệu theo kiểu streaming (chunk 100.000 dòng/lần) kết hợp tối ưu dtype
-    (float32/int8/int16 thay cho float64/int64) và vectorized transform với \texttt{numpy.select()},
-    cho phép nạp toàn bộ 5,8 triệu dòng vào SQLite với mức tiêu thụ RAM chỉ \textasciitilde{}120 MB/chunk,
-    thời gian ước tính 3--8 phút tùy tốc độ ổ đĩa.
+\textbf{Chương 2}: Trình bày cơ sở lý thuyết, bao gồm kho dữ liệu, OLAP, các kỹ thuật tiền xử lý và mô hình học máy;
 
-    \item \textbf{So sánh hệ thống 5 thuật toán Machine Learning:}
-    Xây dựng framework đánh giá thống nhất cho 5 thuật toán (Logistic Regression, Random Forest,
-    Neural Network, XGBoost, LightGBM) trên cùng tập train/test với các chỉ số AUC-ROC, F1,
-    Precision, Recall và thời gian huấn luyện, cho phép so sánh khách quan và toàn diện.
+\textbf{Chương 3}: Mô tả thiết kế kiến trúc hệ thống và mô hình dữ liệu trong kho dữ liệu;
 
-    \item \textbf{Dashboard tương tác 2 cấp phân tích:}
-    Giao diện Streamlit 2 tab: (1) tổng quan với 4 KPI cards và biểu đồ theo hãng/sân bay/tháng/quý,
-    (2) phân tích nguyên nhân delay với pie chart, delay theo mùa và theo khung giờ bay.
-    Bộ lọc động 4 chiều: thời gian, hãng bay, sân bay đi (lọc theo bang), sân bay đến (lọc theo bang).
-\end{enumerate}
+\textbf{Chương 4}: Trình bày quá trình hiện thực, phân tích dữ liệu nguồn, kết quả ETL, OLAP, dashboard và các kết quả khai phá dữ liệu;
+
+\textbf{Chương 5}: Tổng kết, đánh giá kết quả đạt được và đề xuất các hướng phát triển trong tương lai.

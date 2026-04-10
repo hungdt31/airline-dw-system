@@ -1,0 +1,150 @@
+% ============================================================
+% SECTION 3: THIẾT KẾ HỆ THỐNG
+% ============================================================
+\section{Thiết kế hệ thống}
+
+% --- Slide 10 ---
+\begin{frame}{Kiến trúc tổng thể}
+\centering
+\resizebox{0.78\linewidth}{!}{%
+\begin{tikzpicture}[
+  node distance=7mm,
+  box/.style={
+    rectangle, rounded corners=4pt, draw=BKTemplate, fill=white,
+    line width=0.9pt, align=center, inner sep=6pt,
+    minimum height=1.15cm, text width=3.2cm
+  },
+  widebox/.style={
+    rectangle, rounded corners=4pt, draw=BKTemplate, fill=white,
+    line width=0.9pt, align=center, inner sep=7pt,
+    minimum height=1.15cm, text width=8cm
+  },
+  arr/.style={-{Latex[length=2mm]}, thick, BKTemplate}
+]
+\node[widebox] (src) {\textbf{Nguồn dữ liệu thô}\\\scriptsize flights.csv, airlines.csv, airports.csv};
+\node[widebox, below=of src] (etl) {\textbf{Tầng ETL}\\\scriptsize extract $\rightarrow$ transform $\rightarrow$ load theo chunk};
+\node[widebox, below=of etl] (dw) {\textbf{Data Warehouse SQLite}\\\scriptsize Star Schema: 1 fact + 4 dimension tables};
+\node[box, below left=12mm and 10mm of dw] (dash) {\textbf{Dashboard OLAP}\\\scriptsize 6 trang phân tích tương tác};
+\node[box, below right=12mm and 10mm of dw] (mine) {\textbf{Data Mining}\\\scriptsize 500K mẫu, 5 models};
+
+\draw[arr] (src) -- (etl);
+\draw[arr] (etl) -- (dw);
+
+\coordinate (fork) at ([yshift=-8mm]dw.south);
+\draw[thick, BKTemplate] (dw.south) -- (fork);
+\draw[arr] (fork) -| (dash.north);
+\draw[arr] (fork) -| (mine.north);
+\end{tikzpicture}%
+}
+
+\vspace{1mm}
+\small Luồng chính \textbf{một chiều}: thô $\rightarrow$ ETL $\rightarrow$ kho.
+Dashboard và Mining đều \textbf{chỉ đọc} từ kho.
+\end{frame}
+
+% --- Slide 11 ---
+\begin{frame}{Nguyên tắc luồng dữ liệu}
+\begin{enumerate}
+  \item \textbf{Luồng chính một chiều}\\
+        Nguồn thô $\rightarrow$ ETL $\rightarrow$ Kho.
+        Có thể tái tạo bất kỳ lúc nào bằng cách chạy lại ETL.
+
+  \item \textbf{Hai lớp tiêu thụ chỉ đọc}\\
+        Dashboard và Mining đều chỉ \textbf{đọc} từ kho, không ghi ngược.
+        Giữ schema ổn định, tránh xung đột dữ liệu.
+
+  \item \textbf{Chia sẻ kết quả giữa 2 lớp}\\
+        Dashboard gọi mô hình từ lớp Mining (hiển thị xác suất trễ)
+        --- kết nối ở mức ứng dụng, không thay đổi kho.
+\end{enumerate}
+
+\vspace{3mm}
+\begin{block}{Lợi ích}
+Mỗi lớp phát triển và kiểm thử \textbf{độc lập}:
+thay đổi logic dashboard $\not\Rightarrow$ sửa ETL;
+thêm thuật toán mới $\not\Rightarrow$ sửa schema kho.
+\end{block}
+\end{frame}
+
+% --- Slide 12 ---
+\begin{frame}{Star Schema: Mô hình dữ liệu}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.55\textwidth}
+\textbf{Bảng sự kiện} \texttt{fact\_flights}
+\begin{itemize}
+  \item $\approx$ 5,3M bản ghi sau ETL.
+  \item FK tới 4 bảng chiều.
+  \item Đo lường: delay, distance, elapsed time,
+        cờ hủy/chuyển hướng/trễ $\geq$15p.
+\end{itemize}
+
+\vspace{2mm}
+\textbf{4 bảng chiều}
+\begin{itemize}
+  \item \texttt{dim\_airline}: 14 hãng.
+  \item \texttt{dim\_airport}: 322 sân bay (IATA, bang, tọa độ).
+  \item \texttt{dim\_date}: 365 ngày (năm$\to$quý$\to$tháng$\to$tuần$\to$thứ).
+  \item \texttt{dim\_delay\_reason}: 6 loại nguyên nhân.
+\end{itemize}
+\end{column}
+\begin{column}{0.45\textwidth}
+\small
+\begin{tabular}{l r}
+\toprule
+\textbf{Bảng} & \textbf{Số dòng} \\
+\midrule
+\texttt{fact\_flights}     & 5{,}332{,}914 \\
+\texttt{dim\_airline}      & 14 \\
+\texttt{dim\_airport}      & 322 \\
+\texttt{dim\_date}         & 365 \\
+\texttt{dim\_delay\_reason}& 6 \\
+\bottomrule
+\end{tabular}
+
+\vspace{4mm}
+\begin{block}{Ưu điểm}
+\begin{itemize}
+  \item Truy vấn đơn giản, ít JOIN.
+  \item 6 chỉ mục OLAP.
+  \item Đủ nhẹ cho SQLite.
+\end{itemize}
+\end{block}
+\end{column}
+\end{columns}
+\end{frame}
+
+% --- Slide 13 ---
+\begin{frame}{Pipeline ETL}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.55\textwidth}
+\textbf{4 bước tuần tự:}
+\begin{enumerate}
+  \item \textbf{Đọc dimension nhỏ}\\
+        \texttt{airlines.csv}, \texttt{airports.csv} vào RAM;
+        quét \texttt{flights.csv} 1 lần $\to$ \texttt{dim\_date}.
+  \item \textbf{Khởi tạo schema}\\
+        \texttt{schema.sql} + PRAGMA WAL.
+  \item \textbf{Nạp dimension + lookup maps}\\
+        Dictionary ánh xạ surrogate key.
+  \item \textbf{Streaming fact\_flights}\\
+        Chunk 100K dòng $\to$ transform $\to$ INSERT batch $\to$ giải phóng RAM.
+\end{enumerate}
+\end{column}
+\begin{column}{0.45\textwidth}
+\textbf{Tối ưu:}
+\begin{itemize}
+  \item \texttt{float32/int8/int16} thay \texttt{float64} $\to$ RAM $\approx$120 MB/chunk.
+  \item \texttt{numpy.select} vectorized cho phân loại delay.
+  \item Hoàn thành trong \textbf{3--8 phút}.
+\end{itemize}
+
+\vspace{2mm}
+\textbf{Xử lý missing:}
+\begin{itemize}
+  \item Cột delay: \texttt{fillna(0.0)}.
+  \item Thiếu FK: \texttt{dropna} loại dòng.
+  \item Kết quả: giữ $\approx$91,65\% bản ghi.
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}

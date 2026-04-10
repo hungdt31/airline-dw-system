@@ -5,107 +5,171 @@
 \section{Thiết kế hệ thống}
 \label{sec:system_design}
 
-Chương này mô tả \textbf{kiến trúc logic}: hệ thống gồm những \textbf{thành phần} nào,
-mỗi thành phần \textbf{đảm nhiệm} gì và \textbf{tương tác} với nhau ra sao.
-Hình~\ref{fig:system_overview} là sơ đồ trung tâm.
-Việc lựa chọn công nghệ, cấu trúc thư mục mã nguồn, tham số thuật toán và đoạn lệnh cụ thể
-được tập trung ở Chương~\ref{sec:implementation_experiment} (Hiện thực và thực nghiệm).
+Để biến gần 5{,}8 triệu bản ghi chuyến bay thô thành insight phân tích
+và mô hình dự báo, cần thiết kế một kiến trúc tổng thể rõ ràng, trong đó xác định cụ thể vai trò của từng thành phần, trách nhiệm của các bên liên quan, cũng như luồng di chuyển và xử lý dữ liệu xuyên suốt hệ thống.
+Chương này trình bày \textbf{kiến trúc logic} ở ba mức:
+(i)~các thành phần và vai trò,
+(ii)~luồng dữ liệu kết nối chúng,
+(iii)~mô hình dữ liệu trong kho.
+Mọi lựa chọn công nghệ, cấu trúc mã nguồn và tham số cụ thể
+được trình bày ở Chương~\ref{sec:implementation_experiment}.
 
-% ------------------------------------------------------------
+% ============================================================
 \subsection{Kiến trúc tổng quan}
 
-Hệ thống tổ chức theo mô hình \textbf{phân tầng}: dữ liệu thô được đưa qua lớp xử lý và tích hợp,
-tập trung trong kho, rồi được hai lớp tiêu thụ độc lập là \textit{phân tích/trình bày} và \textit{khai phá dữ liệu}.
+Hệ thống được tổ chức theo mô hình \textbf{phân tầng bốn lớp}
+(Hình~\ref{fig:system_overview}):
+dữ liệu thô đi vào qua \textit{tầng xử lý}, được chuẩn hóa và nạp vào \textit{kho trung tâm},
+từ đó hai lớp tiêu thụ độc lập --- \textit{phân tích trực quan} và \textit{khai phá dữ liệu} ---
+cùng truy cập mà không ảnh hưởng lẫn nhau.
 
 \input{content/fig_concept_architecture}
 
-\subsubsection{Các thành phần và vai trò}
-
-\begin{description}
-  \item[Nguồn dữ liệu thô.]
-  Tập bản ghi chuyến bay (khối lượng lớn) kèm các bảng tra cứu hãng và sân bay, ở dạng tệp bảng phẳng chưa chuẩn hóa.
-  Đây là đầu vào duy nhất cho toàn bộ pipeline nghiệp vụ.
-
-  \item[Tầng ETL (trích---biến đổi---nạp).]
-  Đọc dữ liệu từ nguồn, làm sạch và ánh xạ sang khóa chiều;
-  gắn mỗi chuyến bay với thời gian, hãng, sân bay và phân loại nguyên nhân trễ theo quy ước nghiệp vụ.
-  Đầu ra là dữ liệu sẵn sàng nạp vào kho.
-
-  \item[Kho dữ liệu (Data Warehouse).]
-  Lưu trữ tích hợp, đóng vai trò \textbf{điểm truy cập chung} cho phân tích đa chiều và cho việc chuẩn bị dữ liệu huấn luyện.
-  Tổ chức theo \textbf{Star Schema} (một bảng sự kiện trung tâm và các bảng chiều).
-
-  \item[Phân tích và trình bày.]
-  Cho phép người dùng xem chỉ số tổng hợp, drill theo thời gian/địa lý/hãng, phân tích nguyên nhân trễ
-  và (ở mức thiết kế) tích hợp kết quả dự báo từ mô hình để hỗ trợ ra quyết định.
-
-  \item[Khai phá dữ liệu.]
-  Lấy dữ liệu (hoặc mẫu) phù hợp từ kho, xây dựng đặc trưng và nhãn phân loại theo nguyên tắc không rò rỉ thông tin tương lai;
-  huấn luyện, so sánh và đánh giá mô hình; đầu ra phục vụ báo cáo và có thể được lớp trình bày sử dụng.
-\end{description}
-
 % ------------------------------------------------------------
+% \subsubsection{Các thành phần và vai trò}
+
+% \begin{description}
+%   \item[Nguồn dữ liệu thô.]
+%   Tập dữ liệu chuyến bay nội địa Hoa Kỳ năm 2015 (Kaggle),
+%   gồm bản ghi chuyến bay ($\approx$5{,}8M dòng) kèm bảng tra cứu hãng và sân bay ---
+%   tất cả ở dạng CSV phẳng chưa chuẩn hóa.
+%   Đây là đầu vào duy nhất cho toàn bộ pipeline; không có dữ liệu bổ sung nào
+%   được thêm vào giữa chừng.
+
+%   \item[Tầng ETL (Extract -- Transform -- Load).]
+%   Tầng duy nhất được phép ``chạm'' vào dữ liệu thô.
+%   Nhiệm vụ: đọc CSV, làm sạch (xử lý giá trị thiếu, ép kiểu),
+%   ánh xạ từng chuyến bay sang khóa chiều (hãng, sân bay, ngày, nguyên nhân trễ),
+%   và nạp kết quả vào kho.
+%   Quy tắc thiết kế quan trọng: xử lý theo \textbf{lô nhỏ} (chunk) thay vì đọc toàn bộ
+%   để đảm bảo hoạt động được trên máy cá nhân với RAM hạn chế.
+
+%   \item[Kho dữ liệu (Data Warehouse).]
+%   Lưu trữ tích hợp, đóng vai trò \textbf{điểm truy cập chung duy nhất}
+%   cho cả phân tích đa chiều lẫn chuẩn bị dữ liệu huấn luyện.
+%   Tổ chức theo \textbf{Star Schema}: một bảng sự kiện trung tâm
+%   nối với bốn bảng chiều.
+%   Mọi truy vấn --- từ KPI tổng quan đến tạo tập train cho mô hình ---
+%   đều xuất phát từ đây.
+
+%   \item[Phân tích \& Trình bày (Dashboard).]
+%   Giao diện tương tác cho phép thao tác các phép OLAP
+%   (Roll-up, Drill-down, Slice, Dice) trên nhiều chiều:
+%   tổng quan KPI, tuyến đường theo địa lý,
+%   trục thời gian (tháng, thứ, khung giờ), và nguyên nhân trễ.
+%   Ngoài ra tích hợp chức năng dự báo --- gọi mô hình từ lớp khai phá
+%   để hiển thị xác suất trễ cho chuyến bay mới.
+
+%   \item[Khai phá dữ liệu (Data Mining).]
+%   Truy vấn mẫu dữ liệu phù hợp từ kho, xây dựng đặc trưng và nhãn phân loại
+%   theo nguyên tắc \textbf{không rò rỉ thông tin tương lai};
+%   huấn luyện, so sánh và đánh giá nhiều thuật toán.
+%   Đầu ra (mô hình, chỉ số đánh giá) phục vụ báo cáo
+%   và có thể được lớp Dashboard sử dụng để dự báo trực tuyến.
+% \end{description}
+
+% % ============================================================
 \subsection{Luồng dữ liệu và tương tác giữa các thành phần}
 
-\textbf{Luồng chính (một chiều):} nguồn thô $\rightarrow$ ETL $\rightarrow$ kho.
-Hai lớp \textit{Phân tích} và \textit{Khai phá} chỉ \textbf{đọc} từ kho trong phạm vi thiết kế này,
-không ghi ngược bản ghi nghiệp vụ vào kho.
+Thiết kế tuân thủ ba nguyên tắc về luồng dữ liệu:
 
-\textbf{Tương tác giữa hai lớp tiêu thụ:} không bắt buộc cho vận hành kho;
-ở mức ứng dụng, chúng có thể \textbf{chia sẻ kết quả} (ví dụ hiển thị xác suất trễ từ mô hình trên giao diện phân tích)
-mà không làm thay đổi lược đồ dữ liệu trong kho.
+\begin{enumerate}
+    \item \textbf{Luồng chính một chiều:}
+          Nguồn thô $\rightarrow$ ETL $\rightarrow$ Kho.
+          Dữ liệu chỉ đi theo một hướng, đảm bảo kho luôn nhất quán
+          và có thể tái tạo bằng cách chạy lại ETL.
 
-\textbf{Tương tác với nguồn:} chỉ tầng ETL trao đổi trực tiếp với dữ liệu thô; các lớp phía trên chỉ thấy dữ liệu đã qua chuẩn hóa trong kho.
+    \item \textbf{Hai lớp tiêu thụ chỉ đọc:}
+          Cả Dashboard lẫn Mining đều chỉ \textbf{đọc} từ kho,
+          không ghi ngược bản ghi nghiệp vụ vào.
+          Điều này giữ cho lược đồ kho ổn định và tránh xung đột dữ liệu.
 
-% ------------------------------------------------------------
-\subsection{Mô hình dữ liệu logic trong kho (Star Schema)}
+    \item \textbf{Chia sẻ kết quả giữa hai lớp (tùy chọn):}
+          Dashboard có thể gọi mô hình từ lớp Mining (hiển thị xác suất trễ)
+          mà không làm thay đổi cấu trúc kho --- đây là kết nối ở mức ứng dụng,
+          không phải ở mức dữ liệu.
+\end{enumerate}
 
-Trong kho, mỗi chuyến bay là một dòng trong \textbf{bảng sự kiện}, gắn với các \textbf{khóa chiều}
-(hãng, sân bay xuất phát/đến, ngày, loại nguyên nhân trễ được gán theo quy tắc nghiệp vụ)
-và chứa các \textbf{đo lường} như độ trễ, thời gian bay, quãng đường, cờ hủy/chuyển hướng, nhãn trễ theo ngưỡng thời gian.
+Nhờ phân tách rõ ràng, mỗi lớp có thể phát triển và kiểm thử độc lập:
+thay đổi logic dashboard không ảnh hưởng ETL,
+thêm thuật toán mới không yêu cầu sửa schema kho.
 
-\textbf{Lý do chọn Star Schema} so với chuẩn hóa sâu hơn (snowflake): truy vấn phân tích thường chỉ cần
-nối fact với từng chiều một bước, phù hợp công cụ lưu trữ nhẹ và quy mô chiều nhỏ;
-đánh đổi là dư thừa có kiểm soát trên các bảng chiều.
+% ============================================================
+\subsection{Mô hình dữ liệu logic trong kho}
+
+Trái tim của hệ thống là \textbf{Star Schema}:
+mỗi chuyến bay là một dòng trong bảng sự kiện (\textit{fact}),
+gắn với các khóa chiều (\textit{dimension}) và chứa các đo lường định lượng.
+
+\begin{itemize}
+    \item Truy vấn phân tích chỉ cần JOIN fact với từng chiều \textbf{một bước}
+          --- đơn giản, nhanh, dễ tối ưu index.
+    \item Số bảng chiều nhỏ (4 bảng, tổng $<$ 1\,000 bản ghi)
+          nên dư thừa dữ liệu (denormalization) là chấp nhận được.
+    \item Phù hợp với công cụ lưu trữ nhẹ (SQLite) và quy mô đồ án.
+\end{itemize}
+
+Bảng~\ref{tab:fact_flights_logical} mô tả cấu trúc logic bảng sự kiện;
+Bảng~\ref{tab:dimensions_logical} tóm tắt bốn bảng chiều.
+Lược đồ vật lý (kiểu dữ liệu, chỉ mục) được chi tiết hóa ở Chương~\ref{sec:implementation_experiment}.
 
 \begin{table}[H]
 \centering
-\caption{Cấu trúc logic bảng sự kiện \texttt{fact\_flights} (các nhóm thuộc tính chính)}
+\caption{Cấu trúc logic bảng sự kiện \texttt{fact\_flights}}
 \vspace{4pt}
 \small
 \begin{tabular}{|l|l|}
 \hline
-\textbf{Nhóm} & \textbf{Nội dung} \\ \hline
-Khóa \& chiều & Khóa surrogate; FK tới hãng, sân bay đi/đến, ngày, nguyên nhân trễ \\ \hline
-Nhận dạng chuyến & Số hiệu chuyến, tail number (dạng degenerate dimension) \\ \hline
-Thời gian lịch trình & Giờ cất/hạ cánh dự kiến và thực tế (theo quy ước lưu trữ) \\ \hline
-Đo trễ \& thành phần & Trễ khởi hành/đến; các thành phần trễ (NAS, hãng, tàu bay, an ninh, thời tiết) \\ \hline
-Cờ nghiệp vụ & Hủy chuyến, chuyển hướng, nhãn trễ theo ngưỡng (ví dụ $\geq 15$ phút) \\ \hline
+\textbf{Nhóm thuộc tính} & \textbf{Nội dung} \\ \hline
+Khóa \& chiều & Khóa surrogate (thay thế); FK tới hãng, sân bay đi/đến, ngày, nguyên nhân trễ \\ \hline
+Nhận dạng chuyến & Số hiệu chuyến, tail number (degenerate dimension) \\ \hline
+Thời gian & Giờ cất/hạ cánh dự kiến và thực tế \\ \hline
+Đo trễ & Trễ khởi hành, trễ đến; 5 thành phần trễ (NAS, hãng, tàu bay, an ninh, thời tiết) \\ \hline
+Cờ nghiệp vụ & Hủy chuyến, chuyển hướng, nhãn ``trễ $\geq$ 15 phút'' \\ \hline
+Đo lường khác & Thời gian bay, quãng đường (dặm) \\ \hline
 \end{tabular}
 \label{tab:fact_flights_logical}
 \end{table}
 
 \begin{table}[H]
 \centering
-\caption{Các bảng chiều (vai trò logic)}
+\caption{Bốn bảng chiều và vai trò}
 \begin{tabular}{|l|l|}
 \hline
 \textbf{Bảng chiều} & \textbf{Vai trò} \\ \hline
-\texttt{dim\_airline} & Mã và tên hãng \\ \hline
-\texttt{dim\_airport} & Sân bay, địa lý (thành phố, bang, quốc gia, tọa độ) \\ \hline
-\texttt{dim\_date} & Phân cấp thời gian: năm, quý, tháng, tuần, thứ, cuối tuần \\ \hline
-\texttt{dim\_delay\_reason} & Danh mục nguyên nhân trễ (mã, tên, nhóm) \\ \hline
+\texttt{dim\_airline} & Mã IATA và tên đầy đủ hãng hàng không (14 hãng) \\ \hline
+\texttt{dim\_airport} & Sân bay, vị trí địa lý: thành phố, bang, quốc gia, tọa độ (322 sân bay) \\ \hline
+\texttt{dim\_date} & Phân cấp thời gian: năm $\rightarrow$ quý $\rightarrow$ tháng $\rightarrow$ tuần $\rightarrow$ thứ; cờ cuối tuần (365 ngày) \\ \hline
+\texttt{dim\_delay\_reason} & Danh mục 6 nguyên nhân trễ (NAS, hãng, tàu bay, an ninh, thời tiết, không trễ) \\ \hline
 \end{tabular}
 \label{tab:dimensions_logical}
 \end{table}
 
-\subsection*{Thiết kế phân tích và khai phá}
+% ============================================================
+\subsection{Thiết kế module phân tích và khai phá}
 
-\textbf{Phân tích OLAP (khái niệm):} từ kho, các truy vấn tổng hợp theo nhiều chiều
-(thời gian, hãng, sân bay, nguyên nhân, khung giờ) phục vụ báo cáo định hướng;
-chi tiết nhóm câu hỏi và cách ánh xạ sang SQL nằm ở phần hiện thực.
+\subsubsection{Phân tích OLAP}
 
-\textbf{Mô hình học có giám sát (khái niệm):} nhãn dự báo gắn với trễ đến theo ngưỡng;
-vector đặc trưng chỉ gồm thông tin có thể biết trước thời điểm dự báo (tránh rò rỉ tương lai);
-so sánh nhiều học máy và xử lý mất cân bằng lớp bằng trọng số --- các lựa chọn thuật toán và tham số cụ thể
-được trình bày ở Chương~\ref{sec:implementation_experiment}.
+Từ Star Schema, các truy vấn OLAP tổng hợp dữ liệu theo nhiều chiều
+(thời gian, hãng, sân bay, nguyên nhân, khung giờ) để trả lời
+các câu hỏi nghiệp vụ: ``Tháng nào delay nhiều nhất?'',
+``Hãng nào đúng giờ nhất?'', ``Sân bay nào cần cải thiện?''.
+Dashboard hiện thực các phép Slice/Dice/Roll-up/Drill-down
+thông qua bộ lọc tương tác trên giao diện;
+chi tiết nhóm câu truy vấn và cách ánh xạ sang SQL
+nằm ở phần hiện thực (Chương~\ref{sec:implementation_experiment}).
+
+\subsubsection{Mô hình học có giám sát}
+
+Bài toán được đặt ra là \textbf{phân loại nhị phân}:
+dự báo chuyến bay có trễ đến $\geq$ 15 phút hay không,
+với vector đặc trưng chỉ gồm thông tin có thể biết \textit{trước} thời điểm dự báo
+(tránh rò rỉ tương lai --- ví dụ không dùng \texttt{departure\_delay}
+vì chỉ biết sau khi máy bay rời cổng).
+
+Thiết kế so sánh \textbf{nhiều họ thuật toán} ---
+từ mô hình tuyến tính cơ bản (Logistic Regression) đến ensemble (Random Forest, Gradient Boosting)
+và mạng nơ-ron (MLP) --- để đánh giá khách quan trên cùng tập dữ liệu.
+Xử lý mất cân bằng lớp bằng trọng số thay vì thay đổi phân phối mẫu.
+Các lựa chọn thuật toán, tham số và kết quả cụ thể
+được trình bày chi tiết ở Chương~\ref{sec:implementation_experiment}.

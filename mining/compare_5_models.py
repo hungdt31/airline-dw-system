@@ -81,29 +81,49 @@ BG = "#FAFAFA"
 # ═══════════════════════════════════════════════════════════
 
 def load_data(limit: int = 500_000) -> pd.DataFrame:
-    log.info(f"Loading {limit:,} bản ghi từ Data Warehouse...")
+    """Lấy mẫu stratified theo tháng — đảm bảo mỗi tháng có dữ liệu được đại diện đều."""
     conn = sqlite3.connect(DB_PATH)
-    df = pd.read_sql_query(f"""
-        SELECT
-            f.distance, f.elapsed_time,
-            f.is_delayed_15  AS target,
-            d.month, d.day_of_week, d.is_weekend, d.quarter,
-            CAST(SUBSTR(PRINTF('%04d', CAST(f.scheduled_departure AS INTEGER)),1,2)
-                 AS INTEGER) AS dep_hour,
-            a.airline_iata,
-            ap_o.state AS origin_state,
-            ap_d.state AS dest_state
-        FROM fact_flights f
-        JOIN dim_date    d    ON f.date_key           = d.date_key
-        JOIN dim_airline a    ON f.airline_key         = a.airline_key
-        JOIN dim_airport ap_o ON f.origin_airport_key = ap_o.airport_key
-        JOIN dim_airport ap_d ON f.dest_airport_key   = ap_d.airport_key
-        WHERE f.is_cancelled = 0
-        LIMIT {limit}
-    """, conn)
+
+    available_months = [r[0] for r in conn.execute(
+        "SELECT DISTINCT d.month FROM fact_flights f "
+        "JOIN dim_date d ON f.date_key = d.date_key "
+        "WHERE f.is_cancelled = 0 ORDER BY d.month"
+    ).fetchall()]
+    n_months = len(available_months)
+    base, remainder = divmod(limit, n_months)
+    log.info(f"Loading {limit:,} mẫu stratified (~{base:,}/tháng × {n_months} tháng)...")
+
+    chunks = []
+    for i, month in enumerate(available_months):
+        month_limit = base + (1 if i < remainder else 0)
+        chunk = pd.read_sql_query(f"""
+            SELECT
+                f.distance, f.elapsed_time,
+                f.is_delayed_15  AS target,
+                d.month, d.day_of_week, d.is_weekend, d.quarter,
+                CAST(SUBSTR(PRINTF('%04d', CAST(f.scheduled_departure AS INTEGER)),1,2)
+                     AS INTEGER) AS dep_hour,
+                a.airline_iata,
+                ap_o.state AS origin_state,
+                ap_d.state AS dest_state
+            FROM fact_flights f
+            JOIN dim_date    d    ON f.date_key           = d.date_key
+            JOIN dim_airline a    ON f.airline_key         = a.airline_key
+            JOIN dim_airport ap_o ON f.origin_airport_key = ap_o.airport_key
+            JOIN dim_airport ap_d ON f.dest_airport_key   = ap_d.airport_key
+            WHERE f.is_cancelled = 0
+              AND d.month = {month}
+            ORDER BY RANDOM()
+            LIMIT {month_limit}
+        """, conn)
+        chunks.append(chunk)
+        log.info(f"  Tháng {month:2d}: {len(chunk):,} mẫu "
+                 f"| delay rate: {chunk['target'].mean():.1%}")
+
     conn.close()
+    df = pd.concat(chunks, ignore_index=True).sample(frac=1, random_state=42)
     delay_rate = df["target"].mean()
-    log.info(f"Loaded {len(df):,} rows | delay rate: {delay_rate:.2%}")
+    log.info(f"Tổng: {len(df):,} mẫu | delay rate: {delay_rate:.1%}")
     return df, delay_rate
 
 

@@ -5,6 +5,9 @@ Chứng minh sự mất cân bằng lớp trong dữ liệu hàng không.
 Xuất ra: mining/imbalance_report.html
 
 Chạy: python mining/analyze_imbalance.py
+
+Mẫu phân tích: 500.000 dòng, stratified theo tháng + ORDER BY RANDOM() trong tháng
+(cùng ý tưởng với compare_5_models.load_data), tránh LIMIT tuần tự.
 """
 
 import os
@@ -25,25 +28,54 @@ BG = "#FAFAFA"
 # ═══════════════════════════════════════════════════════════
 # 1. LOAD DỮ LIỆU
 # ═══════════════════════════════════════════════════════════
+
+def load_imbalance_sample(limit: int = 500_000) -> pd.DataFrame:
+    """
+    Lấy mẫu stratified theo tháng — mỗi tháng có dữ liệu được đại diện đều,
+    tránh thiên lệch khi chỉ LIMIT tuần tự từ đầu kho.
+    """
+    conn = sqlite3.connect(DB_PATH)
+    available_months = [r[0] for r in conn.execute(
+        "SELECT DISTINCT d.month FROM fact_flights f "
+        "JOIN dim_date d ON f.date_key = d.date_key "
+        "WHERE f.is_cancelled = 0 ORDER BY d.month"
+    ).fetchall()]
+    n_months = len(available_months)
+    base, remainder = divmod(limit, n_months)
+    print(f"Loading {limit:,} mẫu stratified (~{base:,}/tháng × {n_months} tháng)...")
+
+    chunks = []
+    for i, month in enumerate(available_months):
+        month_limit = base + (1 if i < remainder else 0)
+        chunk = pd.read_sql_query(f"""
+            SELECT
+                f.arrival_delay,
+                f.departure_delay,
+                f.is_delayed_15,
+                f.is_cancelled,
+                d.month,
+                d.day_of_week,
+                a.airline_iata
+            FROM fact_flights f
+            JOIN dim_date    d ON f.date_key    = d.date_key
+            JOIN dim_airline a ON f.airline_key = a.airline_key
+            WHERE f.is_cancelled = 0
+              AND d.month = {month}
+            ORDER BY RANDOM()
+            LIMIT {month_limit}
+        """, conn)
+        chunks.append(chunk)
+        print(f"  Tháng {month:2d}: {len(chunk):,} mẫu "
+              f"| delay rate: {chunk['is_delayed_15'].mean():.1%}")
+
+    conn.close()
+    df = pd.concat(chunks, ignore_index=True).sample(frac=1, random_state=42)
+    print(f"Tổng: {len(df):,} mẫu | delay rate: {df['is_delayed_15'].mean():.1%}")
+    return df
+
+
 print("Loading data...")
-conn = sqlite3.connect(DB_PATH)
-df = pd.read_sql_query("""
-    SELECT
-        f.arrival_delay,
-        f.departure_delay,
-        f.is_delayed_15,
-        f.is_cancelled,
-        d.month,
-        d.day_of_week,
-        a.airline_iata
-    FROM fact_flights f
-    JOIN dim_date    d ON f.date_key    = d.date_key
-    JOIN dim_airline a ON f.airline_key = a.airline_key
-    WHERE f.is_cancelled = 0
-    LIMIT 500000
-""", conn)
-conn.close()
-print(f"Loaded {len(df):,} rows")
+df = load_imbalance_sample(limit=500_000)
 
 # ═══════════════════════════════════════════════════════════
 # 2. THỐNG KÊ MẤT CÂN BẰNG
@@ -322,7 +354,9 @@ html = f"""<!DOCTYPE html>
 <body>
 <div class="header">
   <h1>⚖️ Phân tích Mất cân bằng lớp — Airline Delay 2015</h1>
-  <p>Chứng minh tính mất cân bằng và lý do lựa chọn chỉ số đánh giá phù hợp</p>
+  <p>Chứng minh tính mất cân bằng và lý do lựa chọn chỉ số đánh giá phù hợp —
+     mẫu {n_total:,} chuyến không hủy, stratified theo tháng, ngẫu nhiên trong từng tháng
+     (đại diện mùa vụ; không lấy tuần tự đầu kho).</p>
 </div>
 
 <div class="container">

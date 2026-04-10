@@ -1,5 +1,5 @@
 """
-Tải model delay (Random Forest từ mining/predict_delay.py) một lần — dùng cho tab Cấp 3.
+Tải model delay (XGBoost từ mining/predict_delay.py) một lần — dùng cho tab Dự báo.
 """
 
 import os

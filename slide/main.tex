@@ -1,0 +1,123 @@
+\documentclass[aspectratio=169]{beamer}
+\usetheme{Madrid}
+\usefonttheme{structurebold}
+\usefonttheme[onlymath]{serif}
+
+\definecolor{BKTemplate}{rgb}{0.11765, 0.30588, 0.47451}
+\usecolortheme[named=BKTemplate]{structure}
+\setbeamercolor{title}{fg=BKTemplate,bg=}
+\setbeamertemplate{caption}[numbered]
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{footline}[frame number]
+
+\usepackage[utf8]{inputenc}
+\usepackage[T5]{fontenc}
+\usepackage{lmodern}
+\usepackage{url}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{microtype}
+\usepackage{pifont}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{positioning, arrows.meta}
+
+\graphicspath{{images/}{images/dashboard/}{../report/img/}{../report/img/dashboard/}}
+
+%------------------------------------------------------------
+% Title page configuration
+%------------------------------------------------------------
+\title[Xây dựng Airline DW]
+{\vspace*{0.5cm}\\\textbf{\large BÁO CÁO BÀI TẬP LỚN}}
+
+\subtitle{\textbf{\Large XÂY DỰNG KHO DỮ LIỆU VÀ KHAI PHÁ DỮ LIỆU\\CHO LĨNH VỰC HÀNG KHÔNG}}
+
+\author[Nhóm 2211322-2211337-2210429]
+{\textbf{GVHD:} ThS. Đỗ Thanh Thái\\
+\vspace{0.2cm}
+\textbf{SVTH:} Đoàn Trí Hùng (2211322); Nguyễn Mạnh Hùng (2211337);\\
+Nguyễn Cao Cường (2210429)}
+
+\institute[HCMUT]
+{
+  Khoa KH\&KT Máy tính
+}
+
+\date[Apr 2026]
+{Tháng 4, 2026}
+
+%------------------------------------------------------------
+% Auto-insert TOC at the beginning of each section
+%------------------------------------------------------------
+\AtBeginSection[]
+{
+  \begin{frame}
+    \frametitle{Nội dung chính}
+    \tableofcontents[currentsection]
+  \end{frame}
+}
+
+\begin{document}
+
+% --- Title page (with front background) ---
+% --- Title page (with front background) ---
+\setbeamertemplate{background canvas}{%
+	\includegraphics[width=\paperwidth,height=\paperheight]{images/FrontBackground.pdf}%
+}
+
+\begin{frame}[plain]
+\titlepage
+\end{frame}
+
+% --- Set background for all remaining pages ---
+\setbeamertemplate{background canvas}{%
+	\includegraphics[width=\paperwidth,height=\paperheight]{images/Background.pdf}%
+}
+
+% --- Phân chia công việc ---
+\begin{frame}
+\frametitle{PHÂN CHIA CÔNG VIỆC}
+\begin{itemize}
+    \item \textbf{Đoàn Trí Hùng (2211322):}
+    Xây dựng pipeline ETL, thiết kế Star Schema (kho dữ liệu SQLite),
+    phát triển dashboard Streamlit 6 trang, viết báo cáo và slide. (100\%)
+
+    \item \textbf{Nguyễn Mạnh Hùng (2211337):}
+    Huấn luyện và so sánh 5 mô hình ML (Logistic Regression, Random Forest,
+    Neural Network, XGBoost, LightGBM), phân tích kết quả, Feature Importance. (100\%)
+
+    \item \textbf{Nguyễn Cao Cường (2210429):}
+    Khảo sát dữ liệu nguồn (EDA), xây dựng bộ truy vấn OLAP,
+    tổng hợp tài liệu tham khảo, thuyết trình. (100\%)
+\end{itemize}
+\end{frame}
+
+% --- Table of contents ---
+\begin{frame}
+\frametitle{Nội dung chính}
+\tableofcontents
+\end{frame}
+
+% ================= SECTION 1: BÀI TOÁN =================
+\input{Sections/introduction}
+
+% ================= SECTION 2: CƠ SỞ LÝ THUYẾT =================
+\input{Sections/theory}
+
+% ================= SECTION 3: THIẾT KẾ HỆ THỐNG =================
+\input{Sections/system}
+
+% ================= SECTION 4: DASHBOARD =================
+\input{Sections/dashboard}
+
+% ================= SECTION 5: KHAI PHÁ DỮ LIỆU =================
+\input{Sections/mining}
+
+% ================= SECTION 6: KẾT LUẬN =================
+\input{Sections/conclusion}
+
+\end{document}

@@ -29,3 +29,5 @@ venv
 *.run.xml
 *.fdb_latexmk
 *.synctex.gz
+!Background.pdf
+!FrontBackground.pdf

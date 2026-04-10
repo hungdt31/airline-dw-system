@@ -47,7 +47,9 @@ gặp phải nhiều hạn chế khi xử lý tập dữ liệu ở quy mô hàn
 
 \begin{enumerate}
     \item \textbf{Xây dựng kho dữ liệu (Data Warehouse) cho dữ liệu hàng không:}  
-    Thiết kế và triển khai kho dữ liệu theo mô hình \textit{Star Schema}, bao gồm bảng sự kiện \texttt{fact\_flights} và các bảng chiều \texttt{dim\_airline}, \texttt{dim\_airport}, \texttt{dim\_date}, \texttt{dim\_time}. Hệ thống đảm bảo tính nhất quán dữ liệu, tối ưu hóa hiệu năng truy vấn và hỗ trợ phân tích đa chiều hiệu quả.
+    Thiết kế và triển khai kho dữ liệu theo mô hình \textit{Star Schema}, bao gồm bảng sự kiện \texttt{fact\_flights} và bốn bảng chiều
+    \texttt{dim\_airline}, \texttt{dim\_airport}, \texttt{dim\_date}, \texttt{dim\_delay\_reason}.
+    Hệ thống đảm bảo tính nhất quán dữ liệu, tối ưu hóa hiệu năng truy vấn và hỗ trợ phân tích đa chiều hiệu quả.
 
     \item \textbf{Phát triển Dashboard phân tích OLAP:}  
     Xây dựng ứng dụng trực quan hóa dữ liệu tương tác theo hướng \textbf{đa trang}, bao gồm: tổng quan chỉ số, phân tích theo tuyến bay và địa lý, phân tích theo thời gian (tháng/mùa, thứ trong tuần, khung giờ), phân tích nguyên nhân chậm chuyến, tra cứu dữ liệu trong kho và tích hợp màn hình dự báo. Hệ thống hỗ trợ các thao tác \textit{drill-down} (phân tích chi tiết) và \textit{roll-up} (tổng hợp dữ liệu), cùng với bộ lọc động theo thời gian (tháng/quý), hãng hàng không và yếu tố địa lý.

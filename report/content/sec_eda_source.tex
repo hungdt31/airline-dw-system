@@ -68,13 +68,13 @@ Pipeline ETL quy ước điền 0 cho các cột delay (kể cả thành phần)
 \end{table}
 
 Bảng đầy đủ theo từng cột (kèm trung bình, độ lệch chuẩn, rào dưới/trên và tỷ lệ $|\mathrm{z}|>3$)
-được xuất tự động ra tệp \texttt{data/eda\_output/outliers\_summary.csv} để tra cứu hoặc chèn thêm vào phụ lục.
+được xuất tự động ra tệp \texttt{data/eda\_output/outliers\_summary.csv} để tra cứu thêm.
 
 \subsubsection{Ma trận tương quan giữa các biến số}
 
 Hình~\ref{fig:eda_corr_heatmap} cho thấy mức độ tuyến tính Pearson giữa các biến liên tục trên cùng mẫu.
 Các cặp như độ trễ cất cánh---độ trễ đến, thời gian lịch trình và các chỉ số thời gian bay có tương quan dương đáng kể,
-phù hợp với việc \texttt{DEPARTURE\_DELAY} thường xuất hiện là đặc trưng quan trọng trong mô hình dự báo
+phù hợp với vai trò của các đặc trưng thời gian và quãng đường trong mô hình dự báo
 (Mục~\ref{subsec:chap4_mining}).
 Ma trận này chỉ mang tính \textbf{mô tả}; quan hệ thực tế có thể phi tuyến và có tương tác theo hãng/sân bay/tháng.
 

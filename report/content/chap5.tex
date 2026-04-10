@@ -4,104 +4,145 @@
 \clearpage
 \section{Kết luận và hướng phát triển}
 
+% ============================================================
 \subsection{Kết luận}
 
-\subsubsection{Tóm tắt những gì đạt được so với mục tiêu}
+\subsubsection{Đánh giá mức hoàn thành so với mục tiêu}
 
-Đề tài đã hoàn thành toàn bộ ba mục tiêu đề ra:
+Đề tài đặt ra ba mục tiêu ban đầu; bảng dưới đây đối chiếu
+từng mục tiêu với kết quả đạt được:
 
 \begin{enumerate}
-    \item \textbf{Data Warehouse chuẩn hóa:}
-    Đã xây dựng thành công kho dữ liệu SQLite theo Star Schema với 1 fact table
-    (\texttt{fact\_flights}, \textasciitilde{}5,8M bản ghi), 4 bảng chiều và 6 chỉ mục OLAP.
-    ETL pipeline streaming + tối ưu dtype (float32/int8) giữ RAM ổn định \textasciitilde{}120 MB/chunk,
-    hoàn thành toàn bộ trong 3--8 phút.
+    \item \textbf{Data Warehouse chuẩn hóa.}
+    Kho dữ liệu SQLite theo Star Schema đã được xây dựng hoàn chỉnh:
+    1 bảng sự kiện (\texttt{fact\_flights}, $\approx$5{,}3M bản ghi),
+    4 bảng chiều và 6 chỉ mục OLAP.
+    ETL pipeline streaming kết hợp tối ưu dtype (\texttt{float32}/\texttt{int8})
+    giữ RAM ổn định $\approx$120\,MB/chunk, hoàn thành trong 3--8 phút ---
+    chứng minh kiến trúc phân lô hoạt động hiệu quả trên máy cá nhân.
 
-    \item \textbf{Dashboard OLAP đa chiều:}
-    Dashboard Streamlit 2 tab cung cấp 9 nhóm phân tích với bộ lọc động 4 chiều
-    (thời gian tháng/quý, hãng bay, sân bay đi/đến theo bang).
-    Thay thế hoàn toàn các báo cáo tĩnh bằng công cụ phân tích tương tác, cập nhật real-time.
+    \item \textbf{Dashboard OLAP đa chiều.}
+    Dashboard Streamlit 6 trang (Tổng quan, Tuyến đường, Thời gian,
+    Nguyên nhân, Dự báo, Explorer) kết hợp Plotly,
+    hiện thực đầy đủ các phép OLAP (Slice, Dice, Roll-up, Drill-down)
+    thông qua bộ lọc tương tác theo tháng/quý, hãng và địa lý.
+    Mỗi trang tập trung một góc nhìn phân tích riêng,
+    giúp người dùng khám phá dữ liệu một cách có hệ thống.
 
-    \item \textbf{Mô hình dự báo delay:}
-    Framework so sánh 5 thuật toán được xây dựng thống nhất.
-    Mô hình tốt nhất (Gradient Boosting) đạt AUC-ROC \textasciitilde{}0,73,
-    vượt đáng kể so với baseline ngẫu nhiên (0,5).
+    \item \textbf{Mô hình dự báo delay.}
+    Framework so sánh 5 thuật toán (Logistic Regression, Random Forest,
+    Neural Network, XGBoost, LightGBM) trên cùng tập dữ liệu và 7 chỉ số.
+    Mô hình tốt nhất (XGBoost) đạt AUC-ROC $\approx$ 0{,}75 ---
+    vượt đáng kể so với baseline ngẫu nhiên (0{,}5) --- với bộ feature
+    hoàn toàn ``dự báo''.
 \end{enumerate}
 
-\subsubsection{Insight thực tế rút ra từ dữ liệu 2015}
+% ------------------------------------------------------------
+\subsubsection{Insight thực tế và khuyến nghị từ dữ liệu 2015}
 
-Phân tích dữ liệu năm 2015 của hàng không nội địa Mỹ tiết lộ các quy luật quan trọng:
+Kết hợp phân tích OLAP trên dashboard và Feature Importance từ mô hình,
+nhóm rút ra các quy luật quan trọng, kèm \textbf{khuyến nghị hành động}
+cho các bên liên quan:
 
 \begin{itemize}
-    \item \textbf{Hiệu ứng dây chuyền} là nguyên nhân delay lớn nhất: Late Aircraft Delay
-          chiếm tỷ trọng cao nhất, cho thấy hệ thống hàng không rất nhạy cảm với
-          sự gián đoạn ban đầu (một chuyến bay delay buổi sáng có thể gây delay dây chuyền cho 3--5 chuyến tiếp theo).
+    \item \textbf{Hiệu ứng dây chuyền là nguyên nhân delay lớn nhất.}
+          Late Aircraft và NAS chiếm tỷ trọng trễ cao nhất ---
+          hệ thống hàng không rất nhạy với gián đoạn ban đầu:
+          một chuyến delay buổi sáng có thể lan sang 3--5 chuyến tiếp theo.
+          \textit{Khuyến nghị cho hãng:} tăng buffer thời gian quay đầu tàu bay
+          (\textit{turnaround time}) cho các chuyến nối tiếp,
+          đặc biệt tại sân bay hub.
 
-    \item \textbf{Mùa hè và mùa đông} là hai mùa delay nhất: Tháng 6--7 (bão hè) và
-          tháng 12--1 (tuyết rơi) cần chiến lược vận hành dự phòng riêng.
+    \item \textbf{Mùa hè (tháng 6--7) và mùa đông (tháng 12--1) là hai đỉnh delay.}
+          Trùng với mùa bão và mùa tuyết --- hai giai đoạn mà tỷ lệ trễ
+          vượt trung bình năm đáng kể.
+          \textit{Khuyến nghị cho quản lý sân bay:} chuẩn bị phương án
+          dự phòng vận hành riêng cho hai mùa cao điểm,
+          bao gồm bổ sung nhân lực mặt đất và tối ưu lịch bay.
 
-    \item \textbf{Chuyến bay sáng sớm} (trước 8h) là ít delay nhất: Đây là gợi ý thực tế
-          cho hành khách muốn đảm bảo đúng giờ cho kết nối quan trọng.
+    \item \textbf{Chuyến sáng sớm (trước 8h) ít delay nhất.}
+          Chưa chịu ảnh hưởng tích lũy từ các trễ trong ngày.
+          \textit{Khuyến nghị cho hành khách:} ưu tiên chuyến sáng sớm
+          nếu cần đảm bảo đúng giờ cho kết nối quan trọng.
 
-    \item \textbf{Hãng bay ảnh hưởng có hệ thống đến đúng giờ:} Sự khác biệt giữa hãng có
-          tỷ lệ delay thấp nhất và cao nhất lên đến 15--20 điểm phần trăm,
-          phản ánh sự khác biệt trong quản lý vận hành, bảo trì và lịch bay.
+    \item \textbf{Hãng bay ảnh hưởng có hệ thống đến đúng giờ.}
+          Chênh lệch OTP giữa hãng tốt nhất và kém nhất lên đến 15--20 điểm phần trăm,
+          phản ánh khác biệt trong chiến lược quay đầu, bảo trì và xếp lịch.
+          \textit{Khuyến nghị cho ngành:} benchmark OTP công khai
+          tạo áp lực cải thiện từ phía hãng có tỷ lệ trễ cao.
+
+    \item \textbf{Quãng đường và thời gian bay là feature quan trọng nhất trong mô hình.}
+          Chuyến bay dài chịu nhiều rủi ro hơn (thời tiết, không phận, tiêu thụ nhiên liệu).
+          Yếu tố địa lý (bang sân bay) cũng được mô hình khai thác mạnh,
+          cho thấy hạ tầng và khí hậu vùng miền là nhân tố phân biệt rõ.
 \end{itemize}
 
-% ------------------------------------------------------------
+% ============================================================
 \subsection{Hạn chế}
 
 \begin{enumerate}
-    \item \textbf{Dữ liệu chỉ bao phủ năm 2015:}
-    Mô hình và insight chỉ phản ánh thực trạng của một năm cụ thể.
-    Sự thay đổi về cơ sở hạ tầng hàng không, quy định FAA, và hành vi di chuyển sau đại dịch COVID-19
-    có thể làm cho mô hình không còn phù hợp với thực tế hiện tại.
+    \item \textbf{Dữ liệu chỉ bao phủ năm 2015.}
+    Insight và mô hình phản ánh thực trạng một năm cụ thể.
+    Sự thay đổi về cơ sở hạ tầng, quy định FAA,
+    và hành vi di chuyển sau đại dịch COVID-19
+    có thể làm mô hình không còn phù hợp với thực tế hiện tại.
+    Tuy nhiên, \textit{phương pháp luận} (kiến trúc DW, pipeline so sánh mô hình)
+    vẫn áp dụng được khi thay đổi nguồn dữ liệu.
 
-    \item \textbf{SQLite không phù hợp cho môi trường production:}
-    SQLite là cơ sở dữ liệu single-writer, không hỗ trợ concurrent access từ nhiều người dùng
-    và không có cơ chế phân tán. Với quy mô 5,8M bản ghi, một số OLAP query phức tạp
-    có thể mất vài giây trên SQLite trong khi PostgreSQL hoặc ClickHouse có thể xử lý
-    trong mili giây.
+    \item \textbf{SQLite không phù hợp cho production.}
+    SQLite là single-writer, không hỗ trợ concurrent access
+    và không có cơ chế phân tán.
+    Một số OLAP query phức tạp mất vài giây ---
+    chấp nhận được cho đồ án nhưng không đủ cho hệ thống thực
+    phục vụ nhiều người dùng đồng thời.
 
-    \item \textbf{AUC-ROC \textasciitilde{}0,73 còn hạn chế:}
-    Mô hình hiện tại chưa sử dụng dữ liệu thời tiết thực tế, thông tin bảo trì tàu bay,
-    và lịch sử delay của từng tàu bay cụ thể --- các yếu tố này có thể cải thiện đáng kể AUC.
-    Ngoài ra, feature \texttt{DEPARTURE\_DELAY} mang tính ``reactive'' (phản ứng sau khi sự kiện xảy ra)
-    hơn là ``predictive'' (dự báo trước).
+    \item \textbf{AUC-ROC $\approx$ 0{,}75 --- còn khoảng cách so với mô hình lý tưởng.}
+    Mô hình chủ động \textbf{không dùng \texttt{departure\_delay}}
+    để đảm bảo tính dự báo (trước khi cất cánh).
+    Đổi lại, AUC bị giới hạn vì thiếu dữ liệu thời tiết thực tế,
+    thông tin bảo trì tàu bay, và lịch sử delay từng tail number ---
+    các yếu tố có thể cải thiện AUC thêm 0{,}03--0{,}10.
+
+    \item \textbf{Chưa có Clustering / Association Rules.}
+    Đề tài tập trung vào classification (dự báo delay)
+    và OLAP (phân tích đa chiều).
+    Các kỹ thuật khai phá khác như phân cụm sân bay theo hành vi delay
+    hoặc luật kết hợp (``hãng A + sân bay ORD + tháng 12 $\Rightarrow$ delay'')
+    chưa được thực hiện --- có thể là hướng bổ sung.
 \end{enumerate}
 
-% ------------------------------------------------------------
+% ============================================================
 \subsection{Hướng phát triển}
 
 \begin{enumerate}
-    \item \textbf{Mở rộng dữ liệu nhiều năm:}
-    Tích hợp dữ liệu từ 2010--2023 (có sẵn trên Bureau of Transportation Statistics --- BTS)
-    để phát hiện xu hướng dài hạn, ảnh hưởng của đại dịch COVID-19 (2020--2021),
-    và huấn luyện mô hình tổng quát hơn với phân phối dữ liệu đa dạng.
+    \item \textbf{Mở rộng dữ liệu nhiều năm.}
+    Tích hợp dữ liệu 2010--2023 từ Bureau of Transportation Statistics (BTS)
+    để phát hiện xu hướng dài hạn, đánh giá ảnh hưởng COVID-19 (2020--2021),
+    và huấn luyện mô hình tổng quát hơn trên phân phối đa dạng.
 
-    \item \textbf{Tích hợp dữ liệu thời tiết thực:}
-    Kết hợp dữ liệu thời tiết từ NOAA (National Oceanic and Atmospheric Administration)
-    theo sân bay và ngày, thêm features như nhiệt độ, lượng mưa, tốc độ gió.
-    Dự kiến có thể cải thiện AUC thêm 0,03--0,07.
+    \item \textbf{Tích hợp dữ liệu thời tiết.}
+    Kết hợp dữ liệu NOAA (nhiệt độ, lượng mưa, tốc độ gió)
+    theo sân bay và ngày --- đây là yếu tố delay lớn nhất
+    mà mô hình hiện tại chưa có.
 
-    \item \textbf{Deploy lên cloud:}
+    \item \textbf{Nâng cấp hạ tầng lưu trữ.}
     \begin{itemize}
-        \item Thay SQLite bằng \textbf{PostgreSQL} (RDS trên AWS) hoặc \textbf{ClickHouse}
+        \item Thay SQLite bằng \textbf{PostgreSQL} hoặc \textbf{ClickHouse}
               để hỗ trợ concurrent access và OLAP query nhanh hơn.
-        \item Containerize toàn bộ hệ thống bằng \textbf{Docker}, deploy dashboard lên
-              \textbf{AWS EC2} hoặc \textbf{Google Cloud Run}.
-        \item Xây dựng \textbf{REST API} (FastAPI) cho phép dự báo delay theo yêu cầu thời gian thực.
+        \item Containerize hệ thống bằng \textbf{Docker},
+              deploy dashboard lên cloud (AWS EC2 / Google Cloud Run).
+        \item Xây dựng \textbf{REST API} (FastAPI) cho dự báo delay
+              theo yêu cầu thời gian thực.
     \end{itemize}
 
-    \item \textbf{Cải thiện mô hình với SHAP và XAI:}
-    Áp dụng \textbf{SHAP (SHapley Additive exPlanations)} \cite{lundberg2017shap}
-    để giải thích từng dự báo cụ thể --- tại sao chuyến bay này bị dự báo delay?
-    Đặc trưng nào đóng góp nhiều nhất?
-    Điều này giúp dashboard không chỉ hiển thị ``có delay'' mà còn giải thích ``tại sao delay''
-    một cách cụ thể và tin cậy.
+    \item \textbf{Giải thích mô hình với SHAP.}
+    Áp dụng SHAP (SHapley Additive exPlanations) \cite{lundberg2017shap}
+    để giải thích \textit{từng dự báo cụ thể}:
+    tại sao chuyến bay này bị dự báo delay? Feature nào đóng góp nhiều nhất?
+    Dashboard có thể hiển thị không chỉ ``có delay'' mà còn ``tại sao delay''.
 
-    \item \textbf{Xây dựng pipeline streaming thời gian thực:}
-    Sử dụng \textbf{Apache Kafka} để nhận dữ liệu chuyến bay theo thời gian thực từ API hàng không,
-    kết hợp với \textbf{Apache Spark Streaming} để xử lý và dự báo delay ngay khi chuyến bay
-    được đặt lịch, thay vì phân tích dữ liệu lịch sử.
+    \item \textbf{Pipeline streaming thời gian thực.}
+    Sử dụng Apache Kafka nhận dữ liệu chuyến bay real-time từ API hàng không,
+    kết hợp Spark Streaming để dự báo delay ngay khi chuyến bay được đặt lịch ---
+    chuyển hệ thống từ phân tích lịch sử sang hỗ trợ quyết định tức thời.
 \end{enumerate}

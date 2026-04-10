@@ -1,0 +1,173 @@
+% ============================================================
+% SECTION 2: CƠ SỞ LÝ THUYẾT
+% ============================================================
+\section{Cơ sở lý thuyết}
+
+% --- Slide 5 ---
+\begin{frame}{Data Warehouse và Star Schema}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.52\textwidth}
+\textbf{Data Warehouse}
+\begin{itemize}
+  \item Hướng chủ đề (\textit{subject-oriented}).
+  \item Tích hợp, không biến động, biến thiên theo thời gian.
+  \item Tối ưu cho truy vấn phân tích (khác OLTP).
+\end{itemize}
+
+\vspace{2mm}
+\textbf{Star Schema} (Ralph Kimball)
+\begin{itemize}
+  \item \textbf{Fact table}: đo lường định lượng (delay, distance, cờ trễ).
+  \item \textbf{Dimension tables}: ngữ cảnh (hãng, sân bay, ngày, nguyên nhân).
+  \item Ít JOIN, truy vấn nhanh, dễ hiểu.
+\end{itemize}
+\end{column}
+\begin{column}{0.48\textwidth}
+\centering
+\begin{tikzpicture}[
+  scale=0.85, transform shape,
+  fact/.style={rectangle, draw=BKTemplate, fill=BKTemplate!10,
+    minimum width=2.6cm, minimum height=1cm, align=center,
+    font=\small\bfseries, rounded corners=3pt},
+  dim/.style={rectangle, draw=BKTemplate!70, fill=white,
+    minimum width=2.2cm, minimum height=0.7cm, align=center,
+    font=\scriptsize, rounded corners=2pt},
+  arr/.style={-{Latex[length=1.5mm]}, thick, BKTemplate!60}
+]
+\node[fact] (f) {fact\_flights\\{\scriptsize 5,3M dòng}};
+\node[dim, above left=8mm and -3mm of f]  (d1) {dim\_airline};
+\node[dim, above right=8mm and -3mm of f] (d2) {dim\_airport};
+\node[dim, below left=8mm and -3mm of f]  (d3) {dim\_date};
+\node[dim, below right=8mm and -3mm of f] (d4) {dim\_delay\\\_reason};
+\draw[arr] (d1) -- (f);
+\draw[arr] (d2) -- (f);
+\draw[arr] (d3) -- (f);
+\draw[arr] (d4) -- (f);
+\end{tikzpicture}
+\end{column}
+\end{columns}
+\end{frame}
+
+% --- Slide 6 ---
+\begin{frame}{Phân tích OLAP đa chiều}
+\textbf{OLAP} (Online Analytical Processing): phân tích dữ liệu đa chiều, tương tác.
+
+\vspace{2mm}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.48\textwidth}
+\begin{block}{5 phép OLAP cơ bản}
+\begin{description}[\textbf{Drill-down}]
+  \item[\textbf{Roll-up}] Tổng hợp lên: tháng $\to$ quý $\to$ năm.
+  \item[\textbf{Drill-down}] Phân rã: hãng $\to$ từng chuyến.
+  \item[\textbf{Slice}] Cắt 1 chiều: chỉ xem tháng 12.
+  \item[\textbf{Dice}] Lọc nhiều chiều cùng lúc.
+  \item[\textbf{Pivot}] Xoay trục nhìn Data Cube.
+\end{description}
+\end{block}
+\end{column}
+\begin{column}{0.48\textwidth}
+\begin{block}{Ánh xạ trong đề tài}
+\begin{itemize}
+  \item Bộ lọc sidebar = \textbf{Slice / Dice}.
+  \item Chuyển tháng $\leftrightarrow$ quý = \textbf{Roll-up / Drill-down}.
+  \item Xem theo hãng vs. theo sân bay = \textbf{Pivot}.
+\end{itemize}
+\end{block}
+\end{column}
+\end{columns}
+\end{frame}
+
+% --- Slide 7 ---
+\begin{frame}{Tiền xử lý dữ liệu}
+4 giai đoạn (áp dụng cụ thể cho dữ liệu hàng không):
+
+\vspace{2mm}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.5\textwidth}
+\textbf{1. Data Cleaning}
+\begin{itemize}
+  \item \textbf{Missing}: $\sim$76\% delay thành phần thiếu $\to$ \texttt{fillna(0)}.
+  \item \textbf{Outliers}: delay âm = đến sớm (bình thường); delay cực lớn = thật.
+  \item Nhãn nhị phân ``trung hòa'' giá trị cực đoan.
+\end{itemize}
+
+\vspace{1mm}
+\textbf{2. Data Integration}
+\begin{itemize}
+  \item 3 CSV $\to$ lookup join qua surrogate key.
+\end{itemize}
+\end{column}
+\begin{column}{0.5\textwidth}
+\textbf{3. Data Transformation}
+\begin{itemize}
+  \item Z-score cho LR, MLP.
+  \item Feature construction: \texttt{dep\_hour}, \texttt{is\_weekend}, \texttt{quarter}.
+  \item Label Encoding cho hãng, bang.
+\end{itemize}
+
+\vspace{1mm}
+\textbf{4. Data Reduction}
+\begin{itemize}
+  \item 31 cột $\to$ \textbf{10 đặc trưng} biết trước khi cất cánh.
+  \item Class weights thay vì over/under-sampling.
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+% --- Slide 8 ---
+\begin{frame}{Năm thuật toán khai phá dữ liệu}
+\small
+\begin{table}
+\centering
+\scriptsize
+\begin{tabular}{clll}
+\toprule
+\textbf{\#} & \textbf{Thuật toán} & \textbf{Trường phái} & \textbf{Đặc điểm chính} \\
+\midrule
+1 & Logistic Regression & Tuyến tính & Nhanh, giải thích được, baseline \\
+2 & Random Forest & Bagging & $T$ cây song song, robust, feature importance \\
+3 & Neural Network (MLP) & Deep Learning & Nhiều lớp ẩn phi tuyến, ReLU + Adam \\
+4 & XGBoost & Boosting & Cây tuần tự sửa residual, regularization L1/L2 \\
+5 & LightGBM & Boosting & Leaf-wise + histogram splitting, nhanh hơn XGBoost \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\vspace{2mm}
+\begin{block}{Gradient Boosting vs. Random Forest}
+\begin{itemize}
+  \item RF: cây xây \textbf{độc lập} $\to$ majority vote.
+  \item GBDT: cây xây \textbf{tuần tự}, mỗi cây sửa lỗi cây trước:
+        $F_m(\mathbf{x}) = F_{m-1}(\mathbf{x}) + \eta \cdot h_m(\mathbf{x})$.
+\end{itemize}
+\end{block}
+\end{frame}
+
+% --- Slide 9 ---
+\begin{frame}{Chỉ số đánh giá}
+Với dữ liệu mất cân bằng (81\% / 19\%), chỉ số đánh giá rất quan trọng:
+
+\vspace{2mm}
+\small
+\begin{table}
+\centering
+\begin{tabular}{lp{7.8cm}}
+\toprule
+\textbf{Chỉ số} & \textbf{Ý nghĩa} \\
+\midrule
+\textbf{AUC-ROC} & Khả năng phân biệt 2 lớp ở mọi ngưỡng (chỉ số \textbf{chính}) \\
+Accuracy & Tỷ lệ đúng tổng thể --- \textcolor{red}{gây hiểu nhầm khi lệch lớp} \\
+F1-score & Trung bình hài hòa Precision--Recall \\
+Avg. Precision & Diện tích dưới Precision-Recall --- nhạy hơn AUC khi lớp dương nhỏ \\
+Log Loss & Chất lượng xác suất dự đoán (thấp hơn = tốt hơn) \\
+Brier Score & Bình phương sai lệch xác suất--nhãn (thấp hơn = tốt hơn) \\
+TG huấn luyện & Chi phí tính toán thực tế \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\vspace{2mm}
+Mô hình luôn đoán ``đúng giờ'' đạt Accuracy $\approx$81\% nhưng AUC = 0,50
+$\to$ \textbf{Accuracy đơn thuần gây hiểu nhầm}.
+\end{frame}

@@ -3,259 +3,374 @@
 % ============================================================
 \clearpage
 \section{Cơ sở lý thuyết}
+\label{sec:theory}
 
+Chương này trình bày nền tảng lý thuyết cho ba trụ cột của đề tài:
+(i)~kho dữ liệu và phân tích đa chiều,
+(ii)~tiền xử lý dữ liệu,
+(iii)~các thuật toán khai phá và chỉ số đánh giá.
+Mỗi khái niệm được giới thiệu ở mức tổng quát, kèm ví dụ minh họa
+gắn với bài toán delay chuyến bay để người đọc thấy rõ mối liên hệ
+giữa lý thuyết và hiện thực.
+
+% ============================================================
 \subsection{Data Warehouse và OLAP}
 
 \subsubsection{Khái niệm Data Warehouse và Star Schema}
 
-\textbf{Data Warehouse (Kho dữ liệu)} là hệ thống lưu trữ dữ liệu tích hợp, hướng chủ đề (subject-oriented),
-không biến động (non-volatile) và biến thiên theo thời gian (time-variant), được thiết kế phục vụ cho mục đích
-phân tích và hỗ trợ ra quyết định \cite{inmon2005building}.
+\textbf{Data Warehouse (Kho dữ liệu)} là hệ thống lưu trữ dữ liệu
+tích hợp, hướng chủ đề (\textit{subject-oriented}),
+không biến động (\textit{non-volatile}) và biến thiên theo thời gian
+(\textit{time-variant}), được thiết kế phục vụ phân tích
+và hỗ trợ ra quyết định \cite{inmon2005building}.
 Khác với cơ sở dữ liệu tác nghiệp (OLTP) tối ưu cho giao dịch nhanh,
-Data Warehouse được tối ưu cho các truy vấn phân tích phức tạp trên khối lượng dữ liệu lớn.
+Data Warehouse được tối ưu cho các truy vấn phân tích phức tạp
+trên khối lượng dữ liệu lớn.
 
-\textbf{Star Schema} là mô hình tổ chức dữ liệu phổ biến nhất trong Data Warehouse,
-được đề xuất bởi Ralph Kimball \cite{kimball2013datawarehouse}.
-Cấu trúc bao gồm:
+\textbf{Star Schema} là mô hình tổ chức dữ liệu phổ biến nhất
+trong Data Warehouse, được đề xuất bởi Ralph Kimball
+\cite{kimball2013datawarehouse}. Cấu trúc gồm hai thành phần:
 \begin{itemize}
-    \item \textbf{Fact Table (Bảng sự kiện):} Lưu trữ các chỉ số đo lường định lượng (measures)
-          của sự kiện kinh doanh, ví dụ: thời gian delay, khoảng cách bay, số lượng chuyến bay.
-          Fact table chứa các khóa ngoại (foreign key) trỏ đến các bảng chiều.
-    \item \textbf{Dimension Tables (Bảng chiều):} Mô tả các thuộc tính ngữ cảnh của sự kiện
-          (hãng bay, sân bay, thời gian, địa lý). Mỗi bảng chiều liên kết trực tiếp với fact table,
+    \item \textbf{Fact Table (Bảng sự kiện):}
+          Lưu trữ các đo lường định lượng (measures) của sự kiện nghiệp vụ ---
+          ví dụ: thời gian delay, khoảng cách bay, cờ trễ $\geq 15$ phút.
+          Fact table chứa khóa ngoại trỏ đến các bảng chiều.
+    \item \textbf{Dimension Tables (Bảng chiều):}
+          Mô tả ngữ cảnh của sự kiện: hãng bay, sân bay, thời gian, nguyên nhân trễ.
+          Mỗi bảng chiều liên kết trực tiếp với fact table,
           tạo hình dạng ngôi sao đặc trưng.
 \end{itemize}
 
-So với \textbf{Snowflake Schema} --- biến thể chuẩn hóa của Star Schema trong đó các bảng chiều
-được phân rã thêm --- Star Schema có ưu điểm truy vấn đơn giản hơn (ít JOIN hơn),
-hiệu suất cao hơn cho các OLAP query, và dễ hiểu hơn với người dùng cuối,
-với đánh đổi là dư thừa dữ liệu (data redundancy) ở mức chấp nhận được.
+So với \textbf{Snowflake Schema} --- biến thể chuẩn hóa trong đó các bảng chiều
+được phân rã thêm --- Star Schema có ưu điểm truy vấn đơn giản hơn (ít JOIN),
+hiệu suất cao hơn cho OLAP query, và dễ hiểu với người dùng cuối;
+đánh đổi là dư thừa dữ liệu ở mức chấp nhận được khi số bảng chiều nhỏ.
 
 \subsubsection{OLAP và các phép phân tích đa chiều}
 
-\textbf{OLAP (Online Analytical Processing)} là công nghệ cho phép phân tích dữ liệu đa chiều
-một cách linh hoạt và tương tác \cite{codd1993olap}.
-Dữ liệu được tổ chức thành \textit{Data Cube} --- cấu trúc đa chiều cho phép xem xét dữ liệu
-từ nhiều góc độ khác nhau đồng thời.
+\textbf{OLAP (Online Analytical Processing)} là công nghệ cho phép
+phân tích dữ liệu đa chiều một cách linh hoạt và tương tác \cite{codd1993olap}.
+Dữ liệu được tổ chức thành \textit{Data Cube} ---
+cấu trúc đa chiều cho phép quan sát cùng một sự kiện từ nhiều góc độ.
 
-Các phép phân tích OLAP cơ bản bao gồm:
+Năm phép phân tích OLAP cơ bản:
 \begin{itemize}
-    \item \textbf{Roll-up:} Tổng hợp dữ liệu lên mức cao hơn trong hệ thứ bậc,
-          ví dụ từ tháng $\rightarrow$ quý $\rightarrow$ năm.
-    \item \textbf{Drill-down:} Phân rã dữ liệu xuống mức chi tiết hơn,
+    \item \textbf{Roll-up:} Tổng hợp lên mức cao hơn trong hệ thứ bậc,
+          ví dụ tháng $\rightarrow$ quý $\rightarrow$ năm.
+    \item \textbf{Drill-down:} Phân rã xuống mức chi tiết hơn,
           ví dụ từ hãng bay $\rightarrow$ từng chuyến bay cụ thể.
-    \item \textbf{Slice:} Cắt lát Data Cube theo một giá trị cố định của một chiều,
-          ví dụ chỉ xem dữ liệu tháng 12.
-    \item \textbf{Dice:} Lọc Data Cube theo nhiều điều kiện đồng thời trên nhiều chiều.
-    \item \textbf{Pivot (Rotate):} Xoay trục nhìn của Data Cube để quan sát từ góc độ khác.
+    \item \textbf{Slice:} Cắt lát Data Cube theo một giá trị cố định
+          trên một chiều, ví dụ chỉ xem dữ liệu tháng 12.
+    \item \textbf{Dice:} Lọc đồng thời trên nhiều chiều,
+          ví dụ hãng A \textit{và} tháng 6--7 \textit{và} sân bay ORD.
+    \item \textbf{Pivot (Rotate):} Xoay trục nhìn Data Cube
+          để quan sát từ góc độ khác.
 \end{itemize}
 
-% ------------------------------------------------------------
+Trong đề tài này, bộ lọc tương tác trên dashboard chính là
+hiện thực hóa các phép Slice/Dice, còn chuyển đổi tháng $\leftrightarrow$ quý
+là ví dụ của Roll-up/Drill-down.
+
+% ============================================================
 \subsection{Tiền xử lý dữ liệu}
 
-Tiền xử lý dữ liệu là bước quan trọng nhằm đảm bảo chất lượng dữ liệu đầu vào cho cả phân tích
-OLAP lẫn huấn luyện mô hình khai phá. Quy trình bao gồm bốn giai đoạn chính \cite{han2011datamining}:
+Tiền xử lý là bước then chốt đảm bảo chất lượng dữ liệu đầu vào
+cho cả phân tích OLAP lẫn huấn luyện mô hình.
+Quy trình bao gồm bốn giai đoạn chính \cite{han2011datamining},
+mỗi giai đoạn được minh họa qua đặc thù dữ liệu hàng không.
 
-\subsubsection{Data Cleaning (Làm sạch dữ liệu)}
+\subsubsection{Data Cleaning}
 
-Làm sạch dữ liệu xử lý ba vấn đề chính:
+Dữ liệu hàng không chứa ba dạng vấn đề cần xử lý:
 \begin{itemize}
-    \item \textbf{Missing values (Giá trị thiếu):} Dữ liệu hàng không có thể thiếu thông tin
-          về thời gian delay khi chuyến bay bị hủy (CANCELLED = 1) hoặc chuyển hướng (DIVERTED = 1).
-          Chiến lược xử lý: điền giá trị 0 cho các cột delay khi chuyến bay bị hủy
-          (không có delay thực tế), loại bỏ bản ghi không xác định được nguyên nhân.
-    \item \textbf{Outliers (Giá trị ngoại lệ):} Các bản ghi có thời gian delay âm
-          (tàu bay đến sớm hơn dự kiến) hoặc cực lớn (>1000 phút) cần được kiểm tra và xử lý phù hợp.
-          Giá trị delay âm được giữ lại (tàu đến sớm) nhưng được clip ở ngưỡng hợp lý khi feature engineering.
-    \item \textbf{Inconsistency (Mâu thuẫn):} Kiểm tra tính nhất quán giữa các cột,
-          ví dụ tổng thời gian delay các thành phần phải xấp xỉ tổng delay thực tế (\texttt{ARRIVAL\_DELAY}).
+    \item \textbf{Giá trị thiếu (Missing values):}
+          Các cột delay thường trống khi chuyến bay bị hủy
+          (\texttt{CANCELLED\,=\,1}) hoặc chuyển hướng (\texttt{DIVERTED\,=\,1}).
+          Chiến lược: điền 0 cho cột delay (``không có delay'' $\neq$ ``không biết delay''),
+          loại bỏ bản ghi không xác định được nguyên nhân.
+    \item \textbf{Giá trị ngoại lệ (Outliers):}
+          Trong dữ liệu hàng không, delay \textbf{âm} nghĩa là chuyến bay đến
+          \textit{sớm hơn} lịch trình --- đây là hiện tượng bình thường, không phải lỗi,
+          nên được giữ nguyên.
+          Delay \textbf{cực lớn} ($>1000$ phút, tức hơn 16 giờ)
+          tuy hiếm nhưng có thật (ví dụ: máy bay bị hoãn qua ngày do bão).
+          Trong đề tài này, mô hình dự báo \textbf{không sử dụng biến delay}
+          làm đặc trưng đầu vào (xem Mục~\ref{subsec:chap4_mining}),
+          nên các giá trị delay cực đoan không ảnh hưởng trực tiếp đến quá trình học.
+          Chúng chỉ xuất hiện ở cột nhãn mục tiêu dưới dạng nhị phân
+          (\texttt{is\_delayed\_15}: trễ $\geq 15$ phút hay không),
+          nơi mà bản chất cực đoan đã được ``trung hòa'' qua phép rời rạc hóa.
+    \item \textbf{Mâu thuẫn (Inconsistency):}
+          Về nguyên tắc, có thể kiểm tra tổng delay thành phần xấp xỉ tổng delay thực tế
+          (\texttt{ARRIVAL\_DELAY}) để phát hiện bản ghi bất thường.
+          Tuy nhiên trong đề tài này, do $\approx$76\% bản ghi không ghi nhận chi tiết
+          thành phần delay (mục thiếu có cấu trúc ở trên), phép kiểm tra này
+          chỉ áp dụng được trên phần nhỏ dữ liệu và không ảnh hưởng đến
+          pipeline ETL --- vốn đã xử lý bằng \texttt{fillna(0)} cho toàn bộ cột delay.
 \end{itemize}
 
-\subsubsection{Data Integration (Tích hợp dữ liệu)}
+\subsubsection{Data Integration}
 
-Tích hợp dữ liệu từ 3 nguồn CSV độc lập:
+Dữ liệu nằm rải rác trong ba tệp CSV độc lập:
 \begin{itemize}
-    \item \texttt{flights.csv} $\leftarrow$ nguồn chính chứa sự kiện chuyến bay.
-    \item \texttt{airlines.csv} $\leftarrow$ tra cứu tên đầy đủ hãng bay từ mã IATA.
-    \item \texttt{airports.csv} $\leftarrow$ tra cứu thông tin sân bay (tên, thành phố, tiểu bang, tọa độ).
+    \item \texttt{flights.csv} --- nguồn chính: $\approx$5{,}8M bản ghi chuyến bay.
+    \item \texttt{airlines.csv} --- bảng tra cứu tên hãng từ mã IATA.
+    \item \texttt{airports.csv} --- tra cứu vị trí sân bay (thành phố, bang, tọa độ).
 \end{itemize}
-Quá trình tích hợp sử dụng lookup join trong quá trình ETL để điền thông tin
-vào các bảng chiều tương ứng, tránh lưu trùng lặp trong fact table.
+Tích hợp sử dụng \textit{lookup join} trong ETL:
+mỗi chuyến bay được gắn khóa ngoại tới bảng chiều tương ứng,
+tránh lưu trùng lặp trong fact table.
 
-\subsubsection{Data Transformation (Biến đổi dữ liệu)}
-
-\begin{itemize}
-    \item \textbf{Normalization (Chuẩn hóa):} Các cột số học như \texttt{DEPARTURE\_DELAY},
-          \texttt{DISTANCE}, \texttt{SCHEDULED\_DEPARTURE} được chuẩn hóa về khoảng [0, 1]
-          hoặc chuẩn hóa z-score trước khi đưa vào mô hình học máy.
-    \item \textbf{Feature construction (Xây dựng đặc trưng mới):}
-          Tạo các đặc trưng dẫn xuất như: giờ khởi hành (0--23), tháng trong năm, ngày trong tuần,
-          nhãn phân loại \texttt{is\_delayed} (1 nếu \texttt{ARRIVAL\_DELAY} $\geq$ 15 phút, 0 nếu ngược lại).
-    \item \textbf{Encoding:} Các biến phân loại (mã hãng bay, mã sân bay) được mã hóa
-          bằng Label Encoding hoặc Target Encoding để phù hợp với đầu vào của các thuật toán.
-\end{itemize}
-
-\subsubsection{Data Reduction (Giảm chiều dữ liệu)}
+\subsubsection{Data Transformation}
 
 \begin{itemize}
-    \item \textbf{Attribute selection (Chọn lọc thuộc tính):} Từ 31 cột trong \texttt{flights.csv},
-          chọn ra 10 đặc trưng có thể biết \textit{trước khi} chuyến bay khởi hành để đảm bảo
-          mô hình có thể được sử dụng thực tế (không dùng thông tin rò rỉ tương lai).
-    \item \textbf{Sampling (Lấy mẫu):} Do mất cân bằng lớp (79\% không delay, 21\% delay),
-          áp dụng chiến lược class\_weight để cân bằng ảnh hưởng trong quá trình huấn luyện,
-          thay vì oversampling/undersampling vật lý để tránh tăng thời gian huấn luyện.
+    \item \textbf{Chuẩn hóa (Normalization):}
+          Các cột số (\texttt{distance}, \texttt{elapsed\_time},
+          \texttt{dep\_hour}\ldots) được chuẩn hóa z-score
+          trước khi đưa vào mô hình yêu cầu (Logistic Regression, Neural Network).
+    \item \textbf{Xây dựng đặc trưng mới (Feature construction):}
+          Giờ khởi hành (0--23) trích từ \texttt{scheduled\_departure},
+          cờ cuối tuần, quý trong năm,
+          nhãn phân loại \texttt{is\_delayed\_15}
+          (1 nếu \texttt{ARRIVAL\_DELAY} $\geq$ 15 phút).
+    \item \textbf{Mã hóa (Encoding):}
+          Biến phân loại (hãng bay, bang sân bay) được mã hóa
+          bằng Label Encoding để phù hợp đầu vào thuật toán.
 \end{itemize}
 
-% ------------------------------------------------------------
+\subsubsection{Data Reduction}
+
+\begin{itemize}
+    \item \textbf{Chọn lọc thuộc tính (Attribute selection):}
+          Từ 31 cột trong \texttt{flights.csv}, chọn ra 10 đặc trưng
+          có thể biết \textit{trước} hoặc \textit{tại thời điểm} dự báo ---
+          chủ đích loại \texttt{departure\_delay} vì chỉ biết sau khi cất cánh,
+          đảm bảo mô hình mang tính ``dự báo'' thay vì ``phản ứng''.
+    \item \textbf{Xử lý mất cân bằng lớp:}
+          Nhãn nhị phân \texttt{is\_delayed\_15} lệch rõ rệt về lớp đa số;
+          \textbf{tỷ lệ cụ thể} được đo trên kho sau ETL và trình bày ở
+          Mục~\ref{subsec:dataset_imbalance} cùng Hình~\ref{fig:imbalance}.
+          Để đảm bảo tính đại diện, dùng trọng số lớp
+          (\texttt{class\_weight}, \texttt{scale\_pos\_weight}, \texttt{is\_unbalance})
+          trong huấn luyện thay vì oversampling/undersampling vật lý ---
+          giữ nguyên phân phối gốc, tránh tăng thời gian huấn luyện
+          và rủi ro overfitting do mẫu lặp.
+\end{itemize}
+
+% ============================================================
 \subsection{Các thuật toán khai phá dữ liệu}
+
+Đề tài so sánh \textbf{năm thuật toán} thuộc ba họ khác nhau,
+từ mô hình tuyến tính cơ bản đến ensemble và deep learning:
 
 \subsubsection{Logistic Regression}
 
 Logistic Regression là thuật toán phân loại tuyến tính cơ bản,
-mô hình hóa xác suất thuộc lớp dương theo hàm sigmoid:
+mô hình hóa xác suất mẫu $\mathbf{x}$ thuộc lớp dương ($y=1$)
+theo hàm sigmoid:
 \[
 P(y=1 \mid \mathbf{x}) = \frac{1}{1 + e^{-(\mathbf{w}^T\mathbf{x} + b)}}
 \]
-Tham số $\mathbf{w}$ được tối ưu bằng Maximum Likelihood Estimation (MLE) với regularization L1/L2.
-Ưu điểm: nhanh, giải thích được qua hệ số $\mathbf{w}$, xác suất đầu ra calibrate tốt.
-Hạn chế: chỉ mô hình hóa được quan hệ tuyến tính.
+trong đó:
+\begin{itemize}
+    \item $\mathbf{x} = (x_1, x_2, \ldots, x_d)^T$ là vector $d$ đặc trưng đầu vào
+          (ví dụ: tháng, giờ bay, quãng đường, hãng\ldots);
+    \item $\mathbf{w} = (w_1, w_2, \ldots, w_d)^T$ là vector trọng số ---
+          mỗi $w_i$ thể hiện mức ảnh hưởng của đặc trưng $x_i$ đến xác suất delay;
+    \item $b$ là hệ số chặn (bias);
+    \item $\mathbf{w}^T\mathbf{x} + b = w_1 x_1 + w_2 x_2 + \cdots + w_d x_d + b$
+          là tổ hợp tuyến tính --- giá trị càng lớn thì xác suất delay càng cao.
+\end{itemize}
+Tham số $\mathbf{w}$ và $b$ được tối ưu bằng Maximum Likelihood Estimation (MLE)
+với regularization L1/L2 để chống overfitting.
+
+\textit{Ưu điểm:} huấn luyện nhanh; giải thích được --- hệ số $w_i$ dương
+nghĩa là đặc trưng $x_i$ tăng làm tăng xác suất delay;
+xác suất đầu ra calibrate tốt tự nhiên.
+\textit{Hạn chế:} biên quyết định chỉ là siêu phẳng tuyến tính ---
+không bắt được tương tác phức tạp (ví dụ: ``hãng A delay nhiều
+nhưng chỉ vào mùa đông tại sân bay ORD'').
 
 \subsubsection{Random Forest}
 
-Random Forest là phương pháp ensemble kết hợp nhiều Decision Tree \cite{breiman2001random}.
-Mỗi cây được huấn luyện trên bootstrap sample và chỉ xét ngẫu nhiên $\sqrt{d}$ đặc trưng tại mỗi node,
-làm giảm tương quan giữa các cây. Kết quả phân loại là majority vote của tất cả cây.
-Random Forest có khả năng bắt được quan hệ phi tuyến và cung cấp Feature Importance tự nhiên.
+Random Forest là phương pháp ensemble kết hợp $T$ cây quyết định
+(Decision Tree) \cite{breiman2001random}.
+Mỗi cây thứ $t$ ($t = 1, \ldots, T$) được huấn luyện trên một
+\textit{bootstrap sample} (mẫu lấy lại có hoàn lại từ tập train)
+và tại mỗi node chỉ xét ngẫu nhiên $\sqrt{d}$ trong tổng số $d$ đặc trưng
+--- hai kỹ thuật này làm giảm tương quan giữa các cây,
+giúp tập hợp (ensemble) ổn định hơn từng cây đơn lẻ.
 
-\subsubsection{Neural Network (Mạng nơ-ron nhân tạo)}
+Kết quả phân loại là \textit{majority vote}:
+mẫu $\mathbf{x}$ được gán nhãn mà đa số trong $T$ cây đồng thuận.
 
-Mô hình Multilayer Perceptron (MLP) với các lớp fully-connected, hàm kích hoạt ReLU ở các lớp ẩn
-và sigmoid ở lớp đầu ra cho bài toán phân loại nhị phân.
-Mô hình được tối ưu bằng Adam optimizer với binary cross-entropy loss.
-Neural Network có khả năng học các biểu diễn đặc trưng phức tạp nhưng đòi hỏi nhiều dữ liệu
-và thời gian huấn luyện hơn.
+\textit{Ưu điểm:} nắm bắt quan hệ phi tuyến, cung cấp Feature Importance,
+robust với outlier, không cần chuẩn hóa đầu vào.
+\textit{Hạn chế:} $T$ cây xây dựng \textbf{độc lập song song} ---
+mỗi cây không biết cây khác sai ở đâu, giới hạn khả năng sửa lỗi có hệ thống.
+
+\subsubsection{Neural Network}
+
+Mô hình Multilayer Perceptron (MLP) gồm các lớp fully-connected
+xếp nối tiếp: lớp đầu vào ($d$ node ứng với $d$ đặc trưng),
+một hoặc nhiều lớp ẩn, và lớp đầu ra (1 node cho bài toán nhị phân).
+
+Mỗi lớp ẩn thực hiện phép biến đổi:
+\[
+\mathbf{h} = \text{ReLU}(\mathbf{W}\mathbf{x} + \mathbf{b})
+\qquad \text{với } \text{ReLU}(z) = \max(0, z)
+\]
+trong đó $\mathbf{W}$ là ma trận trọng số, $\mathbf{b}$ là vector bias,
+và ReLU (Rectified Linear Unit) giữ nguyên giá trị dương, chặn giá trị âm về 0.
+Lớp đầu ra dùng hàm sigmoid (như Logistic Regression) để cho xác suất $\in [0, 1]$.
+Toàn bộ tham số được tối ưu bằng Adam optimizer
+với hàm mất mát binary cross-entropy (tương đương Log Loss).
+
+\textit{Ưu điểm:} học được biểu diễn đặc trưng phức tạp nhờ xếp chồng
+nhiều lớp phi tuyến; linh hoạt mở rộng kiến trúc.
+\textit{Hạn chế:} cần nhiều dữ liệu và thời gian huấn luyện;
+``hộp đen'' --- khó giải thích tại sao đưa ra dự đoán cụ thể;
+trên tabular data quy mô trung bình, thường kém hơn Gradient Boosting.
 
 \subsubsection{Gradient Boosting: XGBoost và LightGBM}
 
-\textbf{XGBoost} \cite{chen2016xgboost} và \textbf{LightGBM} \cite{ke2017lightgbm} là hai triển khai
-hiệu quả của thuật toán Gradient Boosting Decision Trees (GBDT).
-Thuật toán xây dựng cây quyết định tuần tự, mỗi cây mới học để sửa lỗi của các cây trước:
+\textbf{XGBoost} \cite{chen2016xgboost} và \textbf{LightGBM}
+\cite{ke2017lightgbm} là hai triển khai hiệu quả của
+Gradient Boosting Decision Trees (GBDT).
+Khác với Random Forest xây cây song song,
+GBDT xây cây \textbf{tuần tự}: mỗi cây mới học để sửa lỗi
+(\textit{residual}) của toàn bộ cây trước đó:
 \[
 F_m(\mathbf{x}) = F_{m-1}(\mathbf{x}) + \eta \cdot h_m(\mathbf{x})
 \]
-trong đó $h_m$ là cây mới được tối ưu để giảm residual, $\eta$ là learning rate.
-LightGBM sử dụng Leaf-wise tree growth và Gradient-based One-Side Sampling (GOSS)
-giúp huấn luyện nhanh hơn XGBoost trên dữ liệu lớn.
+trong đó $h_m$ là cây mới được tối ưu để giảm residual,
+$\eta$ là learning rate kiểm soát tốc độ hội tụ.
 
-\subsubsection{Các chỉ số đánh giá}
+Hai điểm khác biệt chính giữa XGBoost và LightGBM:
+\begin{itemize}
+    \item \textbf{Chiến lược phát triển cây:}
+          XGBoost dùng \textit{level-wise} (mở rộng toàn bộ node cùng mức);
+          LightGBM dùng \textit{leaf-wise} (chọn lá có gain cao nhất để split tiếp)
+          --- cùng số lá nhưng mô hình phức tạp hơn.
+    \item \textbf{Tốc độ:} LightGBM sử dụng \textit{histogram-based splitting}
+          (gom giá trị vào $\approx$256 bins) và GOSS sampling,
+          giúp huấn luyện nhanh hơn XGBoost nhiều lần trên dữ liệu lớn.
+\end{itemize}
 
-Với bài toán phân loại nhị phân có mất cân bằng lớp, các ký hiệu cơ bản được định nghĩa
-như sau: $TP$ (True Positive) là số chuyến bay delay được dự đoán đúng là delay;
-$TN$ (True Negative) là số chuyến bay đúng giờ được dự đoán đúng là đúng giờ;
-$FP$ (False Positive) là số chuyến bay đúng giờ bị dự đoán nhầm thành delay;
-$FN$ (False Negative) là số chuyến bay delay bị bỏ sót, dự đoán nhầm thành đúng giờ.
-Ngoài ra, $N$ là tổng số mẫu, $y_i \in \{0, 1\}$ là nhãn thực của mẫu thứ $i$,
-và $\hat{p}_i \in [0, 1]$ là xác suất dự đoán delay của mô hình cho mẫu đó.
+% ============================================================
+\subsection{Các chỉ số đánh giá}
 
-Các chỉ số đánh giá sử dụng trong nghiên cứu bao gồm:
+Với bài toán phân loại nhị phân có mất cân bằng lớp,
+việc chọn chỉ số đánh giá phù hợp quan trọng không kém việc chọn thuật toán.
+Các ký hiệu cơ bản:
+$TP$ (True Positive) --- chuyến delay được đoán đúng delay;
+$TN$ (True Negative) --- đúng giờ được đoán đúng;
+$FP$ (False Positive) --- đúng giờ bị đoán nhầm thành delay;
+$FN$ (False Negative) --- delay bị bỏ sót.
+$N$ là tổng số mẫu, $y_i \in \{0, 1\}$ nhãn thực,
+$\hat{p}_i \in [0, 1]$ xác suất dự đoán delay.
+
+Nghiên cứu sử dụng sáu chỉ số:
 
 \begin{itemize}
+    \item \textbf{AUC-ROC} (Area Under the ROC Curve):
+          Đo khả năng mô hình phân biệt đúng một mẫu delay
+          so với một mẫu đúng giờ được chọn ngẫu nhiên,
+          \textbf{bất kể ngưỡng quyết định}.
+          Giá trị từ 0{,}5 (đoán ngẫu nhiên) đến 1 (hoàn hảo).
 
-    \item \textbf{AUC-ROC} (Area Under the ROC Curve): Diện tích dưới đường ROC
-          (Receiver Operating Characteristic), đo khả năng mô hình phân biệt đúng
-          một mẫu delay so với một mẫu đúng giờ được chọn ngẫu nhiên, bất kể ngưỡng
-          quyết định. Giá trị từ 0{,}5 (tương đương đoán ngẫu nhiên) đến 1 (hoàn hảo).
-
-    \item \textbf{Accuracy:} Tỷ lệ dự đoán đúng trên tổng số mẫu:
+    \item \textbf{Accuracy:} Tỷ lệ dự đoán đúng trên tổng mẫu:
           \[
             \text{Accuracy} = \frac{TP + TN}{TP + TN + FP + FN}
           \]
-          Chỉ số này có thể gây hiểu nhầm khi dữ liệu mất cân bằng --- một mô hình
-          luôn dự đoán ``đúng giờ'' vẫn đạt Accuracy cao --- do đó cần kết hợp với
-          các chỉ số khác.
+          Chỉ số này \textbf{gây hiểu nhầm} khi dữ liệu lệch ---
+          mô hình luôn đoán ``đúng giờ'' vẫn đạt Accuracy 78{,}8\%.
 
     \item \textbf{F1-score:} Trung bình điều hòa của Precision
-          $\left(\frac{TP}{TP+FP}\right)$ và Recall $\left(\frac{TP}{TP+FN}\right)$,
-          phù hợp khi dữ liệu mất cân bằng:
+          $\left(\frac{TP}{TP+FP}\right)$ và Recall
+          $\left(\frac{TP}{TP+FN}\right)$:
           \[
             F_1 = 2 \cdot \frac{\text{Precision} \times \text{Recall}}%
             {\text{Precision} + \text{Recall}}
             = \frac{2\,TP}{2\,TP + FP + FN}
           \]
-          Trong đó Precision là tỷ lệ dự đoán delay đúng trong tổng số dự đoán delay,
-          còn Recall là tỷ lệ chuyến bay delay thực sự được phát hiện.
+          Cân bằng giữa ``đoán đúng khi nói delay'' (Precision)
+          và ``phát hiện được bao nhiêu delay thật'' (Recall).
 
-    \item \textbf{Average Precision} (AP): Diện tích dưới đường Precision--Recall,
-          tính trung bình có trọng số của Precision tại mỗi ngưỡng $k$:
+    \item \textbf{Average Precision} (AP):
+          Diện tích dưới đường Precision--Recall:
           \[
             \text{AP} = \sum_{k} (R_k - R_{k-1}) \cdot P_k
           \]
-          Trong đó $P_k$ và $R_k$ lần lượt là Precision và Recall tại ngưỡng thứ $k$,
-          còn $R_k - R_{k-1}$ là phần tăng thêm của Recall khi hạ ngưỡng từ bước
-          $k{-}1$ sang $k$. Chỉ số này nhạy cảm hơn AUC-ROC trong trường hợp lớp
-          dương (delay) chiếm thiểu số.
+          Nhạy cảm hơn AUC-ROC khi lớp dương (delay) chiếm thiểu số ---
+          phản ánh chính xác hơn hiệu suất trên lớp quan tâm.
 
-    \item \textbf{Log Loss} (Cross-Entropy Loss): Đo độ lệch giữa xác suất dự đoán
-          và nhãn thực tế:
+    \item \textbf{Log Loss} (Cross-Entropy Loss):
+          Đo mức sai lệch giữa xác suất dự đoán và nhãn thực:
           \[
             \text{Log Loss} = -\frac{1}{N}\sum_{i=1}^{N}
             \bigl[y_i \log \hat{p}_i + (1 - y_i)\log(1 - \hat{p}_i)\bigr]
           \]
-          Số hạng $y_i \log \hat{p}_i$ phạt nặng khi mẫu thực sự delay ($y_i = 1$)
-          nhưng mô hình cho xác suất $\hat{p}_i$ thấp; số hạng $(1-y_i)\log(1-\hat{p}_i)$
-          phạt tương tự cho chiều ngược lại. Giá trị càng thấp càng tốt.
+          Phạt nặng khi mô hình ``tự tin sai'' (cho xác suất cao nhưng nhãn ngược lại).
+          Giá trị càng thấp càng tốt.
 
-    \item \textbf{Brier Score:} Trung bình bình phương sai lệch giữa xác suất dự đoán
-          và nhãn thực:
+    \item \textbf{Brier Score:}
+          Trung bình bình phương sai lệch giữa xác suất và nhãn:
           \[
             \text{Brier} = \frac{1}{N}\sum_{i=1}^{N}(\hat{p}_i - y_i)^2
           \]
-          Trong đó $(\hat{p}_i - y_i)^2$ đo mức độ lệch tuyệt đối của xác suất dự
-          đoán so với nhãn nhị phân thực tế của mẫu $i$. Giá trị từ 0 (hoàn hảo)
-          đến 1 (tệ nhất); bổ sung cho Log Loss bằng cách đánh giá độ chính xác
-          tuyệt đối của xác suất thay vì theo thang logarithm.
-
+          Giá trị từ 0 (hoàn hảo) đến 1;
+          bổ sung cho Log Loss bằng cách đo sai lệch tuyệt đối
+          thay vì theo thang logarithm --- hữu ích khi mô hình
+          được dùng để ra quyết định theo mức rủi ro.
 \end{itemize}
 
-\subsubsection{Phân tích các chỉ số dựa trên tập dữ liệu}
+\textit{Tóm lại:} AUC-ROC và Average Precision là hai chỉ số chính
+vì phản ánh hiệu suất phân loại \textbf{độc lập với ngưỡng}
+và phù hợp với dữ liệu mất cân bằng.
+Log Loss và Brier Score bổ sung đánh giá \textbf{chất lượng xác suất}.
+Thời gian huấn luyện được ghi nhận để so sánh hiệu quả tính toán.
 
-Để đánh giá đặc tính của tập dữ liệu, tiến hành phân tích phân bố nhãn
-dựa trên tiêu chí chuyến bay bị trễ khi \texttt{ARRIVAL\_DELAY} $\geq$ 15 phút.
+% ============================================================
+\subsection{Phân tích đặc tính tập dữ liệu}
+\label{subsec:dataset_imbalance}
+
+Trước khi huấn luyện, cần hiểu đặc tính phân bố nhãn
+để chọn chiến lược đánh giá phù hợp.
+Nhãn \texttt{is\_delayed\_15} (trễ đến $\geq$ 15 phút)
+được minh họa qua báo cáo \textbf{500.000} chuyến không bị hủy,
+lấy mẫu phân tầng theo tháng từ kho SQLite sau ETL ---
+đại diện mùa vụ, trùng với chiến lược lấy mẫu huấn luyện mô hình.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.8\linewidth]{img/imbalance_analysis.png}
-\caption{Phân bố nhãn và minh họa ảnh hưởng của dữ liệu mất cân bằng đến mô hình}
+\caption{Phân bố nhãn và ``mô hình ngốc'' trên mẫu 500\,000 chuyến
+(stratified theo tháng, \texttt{is\_cancelled=0})}
 \label{fig:imbalance}
 \end{figure}
 
-Kết quả cho thấy:
+Hình~\ref{fig:imbalance} thống nhất với bốn thẻ KPI và hai biểu đồ bên dưới:
 \begin{itemize}
-    \item Lớp \textbf{không trễ (On-time)} chiếm khoảng 78.82\%.
-    \item Lớp \textbf{trễ (Delayed)} chiếm khoảng 21.18\%.
-    \item Tỷ lệ mất cân bằng (Imbalance Ratio) xấp xỉ 3.72:1.
+    \item Lớp \textbf{On-time:} \textbf{404.328} chuyến (\textbf{80{,}87\%});
+          lớp \textbf{Delayed $\geq$15p:} \textbf{95.672} chuyến (\textbf{19{,}13\%}).
+          Biểu đồ tròn làm tròn 80{,}9\% / 19{,}1\% --- cùng một phân phối.
+    \item \textbf{Imbalance ratio} (On-time\,:\,Delayed) = \textbf{4{,}23\,:1},
+          bằng thương số hai số đếm trên (404.328 / 95.672).
 \end{itemize}
 
-Sự chênh lệch này cho thấy bài toán có tính chất \textbf{dữ liệu mất cân bằng},
-trong đó lớp ``không trễ'' chiếm ưu thế đáng kể.
+Để minh họa hậu quả, một \textbf{mô hình baseline} được xây dựng:
+luôn dự đoán ``đúng giờ'' cho mọi mẫu (cột phải trong hình).
+\textbf{Accuracy} $\approx$ \textbf{0{,}81} (trong báo cáo HTML: \textbf{80{,}9\%}) ---
+trùng với tỉ lệ lớp đa số nên trông ``rất tốt'' ---
+nhưng \textbf{Recall (Delayed)} = 0 (không phát hiện được chuyến trễ nào)
+và \textbf{AUC-ROC} = 0{,}50 (không hơn đoán ngẫu nhiên).
 
-Để minh họa ảnh hưởng của hiện tượng này, một mô hình cơ sở (baseline)
-được xây dựng với chiến lược đơn giản: luôn dự đoán tất cả chuyến bay là ``không trễ''.
-Kết quả cho thấy mô hình vẫn đạt \textbf{Accuracy} cao (78.8\%),
-tuy nhiên hoàn toàn thất bại trong việc phát hiện các chuyến bay bị trễ,
-với \textbf{Recall = 0\%} và \textbf{AUC-ROC = 0.50} (tương đương đoán ngẫu nhiên).
-
-Điều này chứng tỏ rằng \textbf{Accuracy không phải là chỉ số phù hợp}
-trong bối cảnh dữ liệu mất cân bằng. Do đó, các chỉ số như
-\textbf{AUC-ROC}, \textbf{F1-score} và \textbf{Average Precision}
-được ưu tiên sử dụng để đánh giá hiệu năng mô hình trong nghiên cứu này.
-
-Việc phân tích phân bố dữ liệu trước khi huấn luyện mô hình là cần thiết,
-nhằm lựa chọn chiến lược đánh giá và xử lý phù hợp với đặc tính dữ liệu.
-
-Trong ngữ cảnh dự báo delay chuyến bay, AUC-ROC và Average Precision là hai chỉ số
-chính vì phản ánh hiệu suất phân loại độc lập với ngưỡng quyết định và phù hợp với
-dữ liệu mất cân bằng. Log Loss và Brier Score bổ sung để đánh giá chất lượng xác suất
-đầu ra --- quan trọng khi mô hình được dùng để ra quyết định theo mức độ rủi ro.
-Thời gian huấn luyện (TG train) được ghi nhận để so sánh hiệu quả tính toán giữa
-các thuật toán.
+Thí nghiệm đơn giản này chứng minh:
+\textbf{Accuracy đơn thuần gây hiểu nhầm} khi dữ liệu lệch.
+Đây là lý do nghiên cứu ưu tiên AUC-ROC, F1-score và Average Precision
+làm chỉ số đánh giá chính, đồng thời xử lý mất cân bằng bằng
+trọng số lớp (\texttt{class\_weight}, \texttt{scale\_pos\_weight}, \texttt{is\_unbalance})
+thay vì thay đổi phân phối mẫu.
+Kết luận này sẽ được kiểm chứng lại bằng Confusion Matrix
+ở Chương~\ref{sec:implementation_experiment}.

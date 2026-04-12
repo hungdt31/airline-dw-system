@@ -73,88 +73,104 @@ là ví dụ của Roll-up/Drill-down.
 
 % ============================================================
 \subsection{Tiền xử lý dữ liệu}
+\label{subsec:preprocess}
 
 Tiền xử lý là bước then chốt đảm bảo chất lượng dữ liệu đầu vào
 cho cả phân tích OLAP lẫn huấn luyện mô hình.
 Quy trình bao gồm bốn giai đoạn chính \cite{han2011datamining},
 mỗi giai đoạn được minh họa qua đặc thù dữ liệu hàng không.
 
-\subsubsection{Data Cleaning}
+\subsubsection{Làm sạch dữ liệu}
 
-Dữ liệu hàng không chứa ba dạng vấn đề cần xử lý:
+\noindent Dữ liệu hàng không chứa ba dạng vấn đề cần xử lý:
 \begin{itemize}
-    \item \textbf{Giá trị thiếu (Missing values):}
-          Các cột delay thường trống khi chuyến bay bị hủy
-          (\texttt{CANCELLED\,=\,1}) hoặc chuyển hướng (\texttt{DIVERTED\,=\,1}).
-          Chiến lược: điền 0 cho cột delay (``không có delay'' $\neq$ ``không biết delay''),
-          loại bỏ bản ghi không xác định được nguyên nhân.
-    \item \textbf{Giá trị ngoại lệ (Outliers):}
-          Trong dữ liệu hàng không, delay \textbf{âm} nghĩa là chuyến bay đến
-          \textit{sớm hơn} lịch trình --- đây là hiện tượng bình thường, không phải lỗi,
-          nên được giữ nguyên.
-          Delay \textbf{cực lớn} ($>1000$ phút, tức hơn 16 giờ)
-          tuy hiếm nhưng có thật (ví dụ: máy bay bị hoãn qua ngày do bão).
-          Trong đề tài này, mô hình dự báo \textbf{không sử dụng biến delay}
-          làm đặc trưng đầu vào (xem Mục~\ref{subsec:chap4_mining}),
-          nên các giá trị delay cực đoan không ảnh hưởng trực tiếp đến quá trình học.
-          Chúng chỉ xuất hiện ở cột nhãn mục tiêu dưới dạng nhị phân
-          (\texttt{is\_delayed\_15}: trễ $\geq 15$ phút hay không),
-          nơi mà bản chất cực đoan đã được ``trung hòa'' qua phép rời rạc hóa.
-    \item \textbf{Mâu thuẫn (Inconsistency):}
-          Về nguyên tắc, có thể kiểm tra tổng delay thành phần xấp xỉ tổng delay thực tế
-          (\texttt{ARRIVAL\_DELAY}) để phát hiện bản ghi bất thường.
-          Tuy nhiên trong đề tài này, do $\approx$76\% bản ghi không ghi nhận chi tiết
-          thành phần delay (mục thiếu có cấu trúc ở trên), phép kiểm tra này
-          chỉ áp dụng được trên phần nhỏ dữ liệu và không ảnh hưởng đến
-          pipeline ETL --- vốn đã xử lý bằng \texttt{fillna(0)} cho toàn bộ cột delay.
+    \item \textbf{Giá trị thiếu (Missing values):} \\
+    \textit{Nguyên tắc:} Giá trị thiếu cần được xử lý tùy theo ngữ cảnh dữ liệu,
+    có thể điền (imputation) hoặc loại bỏ để tránh sai lệch phân tích. \\
+    \textit{Áp dụng:} Các cột delay thường trống khi chuyến bay bị hủy
+    (\texttt{CANCELLED\,=\,1}) hoặc chuyển hướng (\texttt{DIVERTED\,=\,1}).
+    Do đó, điền 0 cho các cột delay (``không có delay'' $\neq$ ``không biết delay''),
+    và loại bỏ các bản ghi không xác định được nguyên nhân.
+
+    \item \textbf{Giá trị ngoại lệ (Outliers):} \\
+    \textit{Nguyên tắc:} Không phải mọi ngoại lệ đều là nhiễu; cần phân biệt
+    giữa giá trị bất thường hợp lệ và lỗi dữ liệu. \\
+    \textit{Áp dụng:} Trong dữ liệu hàng không, delay \textbf{âm} biểu thị chuyến bay đến sớm
+    nên được giữ lại. Các giá trị delay cực lớn ($>1000$ phút) tuy hiếm nhưng có thật.
+    Trong đề tài này, biến delay không được dùng làm đặc trưng đầu vào
+    (xem Mục~\ref{subsec:chap4_mining}), nên các giá trị cực đoan không ảnh hưởng
+    đến quá trình học; chúng chỉ xuất hiện trong nhãn nhị phân
+    \texttt{is\_delayed\_15}.
+
+    \item \textbf{Mâu thuẫn (Inconsistency):} \\
+    \textit{Nguyên tắc:} Có thể phát hiện dữ liệu không nhất quán bằng cách
+    kiểm tra các ràng buộc logic giữa các thuộc tính. \\
+    \textit{Áp dụng:} Có thể so sánh tổng delay thành phần với
+    \texttt{ARRIVAL\_DELAY} để phát hiện bất thường. Tuy nhiên,
+    do khoảng 76\% bản ghi thiếu chi tiết delay, kiểm tra này chỉ áp dụng
+    trên một phần nhỏ dữ liệu và không ảnh hưởng đến pipeline ETL,
+    vốn sử dụng \texttt{fillna(0)} cho các cột delay.
 \end{itemize}
 
-\subsubsection{Data Integration}
+\subsubsection{Tích hợp dữ liệu}
 
-Dữ liệu nằm rải rác trong ba tệp CSV độc lập:
+\noindent Dữ liệu nằm rải rác trong các tệp đầu vào sau:
 \begin{itemize}
-    \item \texttt{flights.csv} --- nguồn chính: $\approx$5{,}8M bản ghi chuyến bay.
+    \item \texttt{flights.csv} --- nguồn chính: $\sim$ 5{,}8M bản ghi chuyến bay.
     \item \texttt{airlines.csv} --- bảng tra cứu tên hãng từ mã IATA.
     \item \texttt{airports.csv} --- tra cứu vị trí sân bay (thành phố, bang, tọa độ).
+    \item \texttt{L\_AIRPORT\_ID.xls} --- tra cứu \textit{Airport ID} (số) của BTS
+          sang tên sân bay, phục vụ quy đổi sang mã IATA trước khi join \texttt{dim\_airport}
+          (chi tiết Mục~\ref{subsubsec:airport_id_etl}).
 \end{itemize}
 Tích hợp sử dụng \textit{lookup join} trong ETL:
 mỗi chuyến bay được gắn khóa ngoại tới bảng chiều tương ứng,
 tránh lưu trùng lặp trong fact table.
 
-\subsubsection{Data Transformation}
+\subsubsection{Biến đổi dữ liệu}
 
 \begin{itemize}
-    \item \textbf{Chuẩn hóa (Normalization):}
-          Các cột số (\texttt{distance}, \texttt{elapsed\_time},
-          \texttt{dep\_hour}\ldots) được chuẩn hóa z-score
-          trước khi đưa vào mô hình yêu cầu (Logistic Regression, Neural Network).
-    \item \textbf{Xây dựng đặc trưng mới (Feature construction):}
-          Giờ khởi hành (0--23) trích từ \texttt{scheduled\_departure},
-          cờ cuối tuần, quý trong năm,
-          nhãn phân loại \texttt{is\_delayed\_15}
-          (1 nếu \texttt{ARRIVAL\_DELAY} $\geq$ 15 phút).
-    \item \textbf{Mã hóa (Encoding):}
-          Biến phân loại (hãng bay, bang sân bay) được mã hóa
-          bằng Label Encoding để phù hợp đầu vào thuật toán.
+    \item \textbf{Chuẩn hóa (Normalization):} \\
+    \textit{Nguyên tắc:} Các thuật toán học máy nhạy với thang đo dữ liệu
+    (đặc biệt là các mô hình tuyến tính và mạng nơ-ron), do đó cần đưa các
+    đặc trưng số về cùng phân phối để đảm bảo quá trình tối ưu hội tụ tốt. \\
+    \textit{Áp dụng:} Các cột số (\texttt{distance}, \texttt{elapsed\_time},
+    \texttt{dep\_hour}\ldots) được chuẩn hóa theo z-score trước khi đưa vào
+    các mô hình như Logistic Regression và Neural Network.
+
+    \item \textbf{Xây dựng đặc trưng mới (Feature construction):} \\
+    \textit{Nguyên tắc:} Tạo đặc trưng mới từ dữ liệu gốc giúp mô hình khai thác
+    tốt hơn thông tin tiềm ẩn và cải thiện khả năng dự báo. \\
+    \textit{Áp dụng:} Trích xuất giờ khởi hành (0--23) từ \texttt{scheduled\_departure},
+    tạo cờ cuối tuần, xác định quý trong năm, và xây dựng nhãn phân loại
+    \texttt{is\_delayed\_15} (1 nếu \texttt{ARRIVAL\_DELAY} $\geq$ 15 phút).
+
+    \item \textbf{Mã hóa (Encoding):} \\
+    \textit{Nguyên tắc:} Các thuật toán học máy yêu cầu đầu vào dạng số,
+    do đó biến phân loại cần được chuyển đổi sang dạng số phù hợp. \\
+    \textit{Áp dụng:} Các biến phân loại như hãng bay và bang sân bay
+    được mã hóa bằng Label Encoding để sử dụng làm đầu vào cho mô hình.
 \end{itemize}
 
-\subsubsection{Data Reduction}
+\subsubsection{Giảm chiều dữ liệu}
 
 \begin{itemize}
-    \item \textbf{Chọn lọc thuộc tính (Attribute selection):}
-          Từ 31 cột trong \texttt{flights.csv}, chọn ra 10 đặc trưng
-          có thể biết \textit{trước} hoặc \textit{tại thời điểm} dự báo ---
-          chủ đích loại \texttt{departure\_delay} vì chỉ biết sau khi cất cánh,
-          đảm bảo mô hình mang tính ``dự báo'' thay vì ``phản ứng''.
-    \item \textbf{Xử lý mất cân bằng lớp:}
-          Nhãn nhị phân \texttt{is\_delayed\_15} lệch rõ rệt về lớp đa số;
-          \textbf{tỷ lệ cụ thể} được đo trên kho sau ETL và trình bày ở
-          Mục~\ref{subsec:dataset_imbalance} cùng Hình~\ref{fig:imbalance}.
-          Để đảm bảo tính đại diện, dùng trọng số lớp
-          (\texttt{class\_weight}, \texttt{scale\_pos\_weight}, \texttt{is\_unbalance})
-          trong huấn luyện thay vì oversampling/undersampling vật lý ---
-          giữ nguyên phân phối gốc, tránh tăng thời gian huấn luyện
-          và rủi ro overfitting do mẫu lặp.
+    \item \textbf{Chọn lọc thuộc tính (Attribute selection):} \\
+    \textit{Nguyên tắc:} Việc giảm số chiều dữ liệu giúp giảm nhiễu,
+    tăng tốc huấn luyện và hạn chế overfitting; đặc biệt trong bài toán dự báo,
+    chỉ nên sử dụng các đặc trưng có sẵn tại thời điểm dự đoán. \\
+    \textit{Áp dụng:} Từ 31 cột trong \texttt{flights.csv}, chọn ra 10 đặc trưng
+    có thể biết \textit{trước} hoặc \textit{tại thời điểm} dự báo.
+    Cụ thể, loại bỏ \texttt{departure\_delay} vì chỉ xuất hiện sau khi máy bay cất cánh,
+    đảm bảo mô hình mang tính ``dự báo'' thay vì ``phản ứng''.
+
+    \item \textbf{Xử lý mất cân bằng lớp:} \\
+    \textit{Nguyên tắc:} Khi dữ liệu bị mất cân bằng, mô hình dễ thiên lệch về lớp đa số;
+    do đó cần điều chỉnh trong quá trình huấn luyện để đảm bảo khả năng học cho lớp thiểu số. \\
+    \textit{Áp dụng:} Thay vì oversampling/undersampling, đề tài sử dụng trọng số lớp
+    (\texttt{class\_weight}, \texttt{scale\_pos\_weight}, \texttt{is\_unbalance})
+    trong huấn luyện nhằm giữ nguyên phân phối dữ liệu gốc,
+    đồng thời giảm chi phí tính toán và hạn chế overfitting do lặp mẫu.
 \end{itemize}
 
 % ============================================================
@@ -274,11 +290,16 @@ Nghiên cứu sử dụng sáu chỉ số:
 
 \begin{itemize}
     \item \textbf{AUC-ROC} (Area Under the ROC Curve):
-          Đo khả năng mô hình phân biệt đúng một mẫu delay
-          so với một mẫu đúng giờ được chọn ngẫu nhiên,
-          \textbf{bất kể ngưỡng quyết định}.
-          Giá trị từ 0{,}5 (đoán ngẫu nhiên) đến 1 (hoàn hảo).
+    Là chỉ số đo lường diện tích dưới đường cong ROC, thể hiện khả năng phân biệt giữa lớp trễ chuyến và đúng giờ. 
+    Đây là thước đo then chốt cho bài toán dữ liệu mất cân bằng nhờ đặc tính đánh giá khách quan ở mọi ngưỡng quyết định. 
+    Giá trị chỉ số dao động từ 0{,}5 (dự báo ngẫu nhiên) đến 1{,}0 (phân loại hoàn hảo).
 
+    \begin{figure}[H]
+      \centering
+      \includegraphics[width=0.8\textwidth]{img/auc.png}
+      \caption{AUC-ROC}
+      \label{fig:auc}
+    \end{figure}
     \item \textbf{Accuracy:} Tỷ lệ dự đoán đúng trên tổng mẫu:
           \[
             \text{Accuracy} = \frac{TP + TN}{TP + TN + FP + FN}
@@ -330,47 +351,3 @@ vì phản ánh hiệu suất phân loại \textbf{độc lập với ngưỡng}
 và phù hợp với dữ liệu mất cân bằng.
 Log Loss và Brier Score bổ sung đánh giá \textbf{chất lượng xác suất}.
 Thời gian huấn luyện được ghi nhận để so sánh hiệu quả tính toán.
-
-% ============================================================
-\subsection{Phân tích đặc tính tập dữ liệu}
-\label{subsec:dataset_imbalance}
-
-Trước khi huấn luyện, cần hiểu đặc tính phân bố nhãn
-để chọn chiến lược đánh giá phù hợp.
-Nhãn \texttt{is\_delayed\_15} (trễ đến $\geq$ 15 phút)
-được minh họa qua báo cáo \textbf{500.000} chuyến không bị hủy,
-lấy mẫu phân tầng theo tháng từ kho SQLite sau ETL ---
-đại diện mùa vụ, trùng với chiến lược lấy mẫu huấn luyện mô hình.
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.8\linewidth]{img/imbalance_analysis.png}
-\caption{Phân bố nhãn và ``mô hình ngốc'' trên mẫu 500\,000 chuyến
-(stratified theo tháng, \texttt{is\_cancelled=0})}
-\label{fig:imbalance}
-\end{figure}
-
-Hình~\ref{fig:imbalance} thống nhất với bốn thẻ KPI và hai biểu đồ bên dưới:
-\begin{itemize}
-    \item Lớp \textbf{On-time:} \textbf{404.328} chuyến (\textbf{80{,}87\%});
-          lớp \textbf{Delayed $\geq$15p:} \textbf{95.672} chuyến (\textbf{19{,}13\%}).
-          Biểu đồ tròn làm tròn 80{,}9\% / 19{,}1\% --- cùng một phân phối.
-    \item \textbf{Imbalance ratio} (On-time\,:\,Delayed) = \textbf{4{,}23\,:1},
-          bằng thương số hai số đếm trên (404.328 / 95.672).
-\end{itemize}
-
-Để minh họa hậu quả, một \textbf{mô hình baseline} được xây dựng:
-luôn dự đoán ``đúng giờ'' cho mọi mẫu (cột phải trong hình).
-\textbf{Accuracy} $\approx$ \textbf{0{,}81} (trong báo cáo HTML: \textbf{80{,}9\%}) ---
-trùng với tỉ lệ lớp đa số nên trông ``rất tốt'' ---
-nhưng \textbf{Recall (Delayed)} = 0 (không phát hiện được chuyến trễ nào)
-và \textbf{AUC-ROC} = 0{,}50 (không hơn đoán ngẫu nhiên).
-
-Thí nghiệm đơn giản này chứng minh:
-\textbf{Accuracy đơn thuần gây hiểu nhầm} khi dữ liệu lệch.
-Đây là lý do nghiên cứu ưu tiên AUC-ROC, F1-score và Average Precision
-làm chỉ số đánh giá chính, đồng thời xử lý mất cân bằng bằng
-trọng số lớp (\texttt{class\_weight}, \texttt{scale\_pos\_weight}, \texttt{is\_unbalance})
-thay vì thay đổi phân phối mẫu.
-Kết luận này sẽ được kiểm chứng lại bằng Confusion Matrix
-ở Chương~\ref{sec:implementation_experiment}.

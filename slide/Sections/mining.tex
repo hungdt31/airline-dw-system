@@ -1,227 +1,305 @@
 % ============================================================
-% SECTION 5: KHAI PHÁ DỮ LIỆU
+% SECTION 5: KHAI PHÁ DỮ LIỆU (đồng bộ report/chap4.tex, mục Quy trình khai phá)
 % ============================================================
 \section{Khai phá dữ liệu}
 
-% --- Slide 21 ---
+% --- Slide: Phát biểu bài toán ---
 \begin{frame}{Phát biểu bài toán}
 \begin{block}{Câu hỏi khai phá}
 \textit{``Có thể dự đoán một chuyến bay sẽ trễ đến $\geq 15$ phút hay không,
 chỉ dựa trên thông tin biết \textbf{trước} khi cất cánh?''}
 \end{block}
 
-\vspace{3mm}
+\vspace{2mm}
 \begin{columns}[T,onlytextwidth]
-\begin{column}{0.5\textwidth}
-\textbf{Bài toán phân lớp nhị phân:}
-\begin{itemize}
-  \item Nhãn: \texttt{is\_delayed\_15} (0/1).
-  \item Mất cân bằng: 81\% / 19\%.
-  \item \textbf{Không dùng} \texttt{departure\_delay}.
+\begin{column}{0.52\textwidth}
+\small\textbf{Phân lớp nhị phân}
+\begin{itemize}\setlength\itemsep{0.2em}
+  \item \textbf{Nhãn:} \texttt{is\_delayed\_15} --- 1 nếu \texttt{arrival\_delay} $\geq 15$ phút, 0 nếu đúng giờ.
+  \item \textbf{Mất cân bằng:} $\approx$\textbf{81{,}55\%} đúng giờ / \textbf{18{,}45\%} trễ (chuyến không hủy).
+  \item \textbf{Không dùng} \texttt{departure\_delay} --- chỉ biết \textit{sau} khi rời cổng (phản ứng, không dự báo).
 \end{itemize}
 \end{column}
-\begin{column}{0.5\textwidth}
-\textbf{Quy trình end-to-end:}
-\begin{enumerate}
+\begin{column}{0.48\textwidth}
+\small\textbf{Quy trình end-to-end}
+\begin{enumerate}\setlength\itemsep{0.15em}
   \item Lấy 500K mẫu (stratified theo tháng).
   \item Tiền xử lý + 10 đặc trưng.
-  \item Holdout 80/20 (stratify=y).
+  \item Holdout 80/20 (\texttt{stratify=y}).
   \item Huấn luyện 5 mô hình.
-  \item Đánh giá 7 chỉ số.
+  \item Đánh giá 7 chỉ số + Confusion Matrix + Feature Importance.
 \end{enumerate}
 \end{column}
 \end{columns}
 \end{frame}
 
-% --- Slide 22 ---
+% --- Chuẩn bị dữ liệu ---
+\begin{frame}[shrink=5]{Chuẩn bị dữ liệu: lấy mẫu \& tiền xử lý}
+\small
+\textbf{a. Lấy mẫu phân tầng theo tháng} (500.000 mẫu)
+\begin{itemize}\setlength\itemsep{0.15em}
+  \item Mỗi tháng $\approx \lfloor 500{.}000/12\rfloor = 41{.}666$ mẫu; phần dư (8) gán các tháng đầu $\to$ đủ 500.000.
+  \item Trong tháng: \texttt{ORDER BY RANDOM()} từ \texttt{fact}; ghép 12 chunk rồi shuffle (\texttt{random\_state=42}).
+  \item Giữ \textbf{tính mùa vụ} (bão hè, tuyết đông, lễ) thay vì lấy tuần tự từ đầu file.
+\end{itemize}
+
+\vspace{1mm}
+\textbf{b. Tiền xử lý} (4 bước)
+\begin{enumerate}\setlength\itemsep{0.12em}
+  \item Loại dòng thiếu nhãn hoặc khóa: \texttt{target}, \texttt{month}, \texttt{day\_of\_week}, \texttt{airline\_iata}.
+  \item \textbf{Median} cho \texttt{distance}, \texttt{elapsed\_time} khi thiếu.
+  \item \texttt{dep\_hour} $\in [0,23]$; thiếu $\to$ 12 (giờ trưa).
+  \item \textbf{Label Encoding:} \texttt{airline\_iata}$\to$\texttt{airline\_enc},
+        \texttt{origin\_state}$\to$\texttt{origin\_enc}, \texttt{dest\_state}$\to$\texttt{dest\_enc}.
+\end{enumerate}
+
+\vspace{1mm}
+\footnotesize\textit{LR \& MLP: thêm \texttt{StandardScaler}; RF / XGBoost / LightGBM: dữ liệu gốc.}
+\end{frame}
+
+% --- 10 đặc trưng ---
 \begin{frame}{10 đặc trưng đầu vào}
 \small
 \begin{table}
 \centering
-\scriptsize
-\begin{tabular}{clll}
-\toprule
+\scriptsize\slideTablePad
+\begin{tabular}{|c|c|c|c|}
+\hline
 \textbf{Nhóm} & \textbf{Feature} & \textbf{Kiểu} & \textbf{Lý do} \\
-\midrule
+\hline
 \multirow{4}{*}{\rotatebox{90}{\tiny Thời gian}}
   & \texttt{month}        & int   & Mùa vụ (bão hè, tuyết đông) \\
   & \texttt{day\_of\_week} & int   & Lưu lượng theo ngày \\
   & \texttt{is\_weekend}   & int   & Cờ cuối tuần \\
   & \texttt{quarter}       & int   & Quý trong năm \\
-\midrule
+\hline
 \multirow{3}{*}{\rotatebox{90}{\tiny Chuyến}}
-  & \texttt{dep\_hour}     & int   & Hiệu ứng tích lũy trong ngày \\
+  & \texttt{dep\_hour}     & int   & Tích lũy trễ trong ngày \\
   & \texttt{distance}      & float & Quãng đường (dặm) \\
-  & \texttt{elapsed\_time} & float & Thời gian bay (phút) \\
-\midrule
+  & \texttt{elapsed\_time} & float & Thời gian chặng (phút) \\
+\hline
 \multirow{3}{*}{\rotatebox{90}{\tiny Ngữ cảnh}}
-  & \texttt{airline\_enc}  & int   & Mã hãng (Label Encoding) \\
-  & \texttt{origin\_enc}   & int   & Bang sân bay đi \\
-  & \texttt{dest\_enc}     & int   & Bang sân bay đến \\
-\bottomrule
+  & \texttt{airline\_enc}  & int   & Hãng (Label Encoding) \\
+  & \texttt{origin\_enc}   & int   & Bang đi (giảm cardinality) \\
+  & \texttt{dest\_enc}     & int   & Bang đến \\
+\hline
 \end{tabular}
 \end{table}
 
 \vspace{1mm}
-\begin{alertblock}{Nguyên tắc quan trọng}
-\small Loại \texttt{departure\_delay}, delay thành phần, \texttt{is\_cancelled}, \texttt{is\_diverted},
-\texttt{tail\_number} --- tất cả chỉ biết \textit{sau} khi sự kiện xảy ra.
+\begin{alertblock}{Cột loại (rò rỉ / không tổng quát)}
+\scriptsize
+\texttt{departure\_delay}; \texttt{arrival\_delay} (nhãn); delay thành phần;
+\texttt{tail\_number}, \texttt{flight\_number}; \texttt{is\_cancelled}, \texttt{is\_diverted};
+IATA sân bay cụ thể $\to$ dùng \textbf{bang}.
 \end{alertblock}
 \end{frame}
 
-% --- Slide 23 ---
-\begin{frame}{Cấu hình huấn luyện}
+% --- 5 thuật toán ---
+\begin{frame}{Lựa chọn thuật toán \& xử lý mất cân bằng}
 \small
 \begin{table}
 \centering
-\scriptsize
-\begin{tabular}{lp{8.5cm}}
-\toprule
-\textbf{Mô hình} & \textbf{Tham số chính} \\
-\midrule
-Logistic Regression & \texttt{saga}, C=1.0, \texttt{class\_weight='balanced'}, max\_iter=200 \\
-Random Forest & 100 cây, max\_depth=10, min\_samples\_leaf=50, \texttt{class\_weight='balanced'} \\
-Neural Network & [10$\to$64$\to$32$\to$1], ReLU, Adam, $\alpha$=0.001 (L2), batch=512, early stop \\
-XGBoost & 300 cây, max\_depth=6, lr=0.05, subsample=0.8, \texttt{scale\_pos\_weight}$\approx$3.76 \\
-LightGBM & 300 cây, max\_depth=6, lr=0.05, subsample=0.8, \texttt{is\_unbalance=True} \\
-\bottomrule
+\scriptsize\slideTablePad
+\begin{tabular}{|c|l|l|}
+\hline
+\textbf{\#} & \textbf{Thuật toán} & \textbf{Trường phái / lý do ngắn} \\
+\hline
+1 & Logistic Regression & Tuyến tính --- baseline, giải thích được \\
+\hline
+2 & Random Forest       & Bagging --- robust nhiễu \\
+\hline
+3 & Neural Network (MLP) & Phi tuyến phức tạp \\
+\hline
+4 & XGBoost             & Boosting --- GBDT, L1/L2 \\
+\hline
+5 & LightGBM            & Boosting --- nhanh, leaf-wise \\
+\hline
 \end{tabular}
 \end{table}
 
 \vspace{2mm}
-\begin{block}{Xử lý mất cân bằng}
-Dùng \textbf{trọng số lớp} (\texttt{class\_weight}, \texttt{scale\_pos\_weight}, \texttt{is\_unbalance})
-thay vì over/undersampling $\to$ giữ nguyên phân phối gốc, tránh overfitting.
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.48\textwidth}
+\scriptsize\textbf{Cân bằng lớp (trọng số, không resample)}
+\begin{itemize}\setlength\itemsep{0.1em}
+  \item LR, RF: \texttt{class\_weight='balanced'}
+  \item XGBoost: \texttt{scale\_pos\_weight}
+  \item LightGBM: \texttt{is\_unbalance=True}
+\end{itemize}
+\end{column}
+\begin{column}{0.52\textwidth}
+\scriptsize\textbf{Cấu hình chính (tóm tắt)}
+\begin{itemize}\setlength\itemsep{0.1em}
+  \item LR: \texttt{saga}, C=1.0, max\_iter=200
+  \item RF: 100 cây, depth 10, leaf 50
+  \item MLP: [10$\to$64$\to$32$\to$1], Adam, $\alpha$=0.001
+  \item XGB/LGBM: 300 cây, depth 6, lr=0.05, subsample=0.8
+\end{itemize}
+\end{column}
+\end{columns}
+\end{frame}
+
+% --- Đánh giá ---
+\begin{frame}[shrink=3]{Phương pháp đánh giá}
+\small
+\textbf{Chia dữ liệu:} Holdout \textbf{80/20}, \texttt{stratify=y}, 400K train / 100K test; tỷ lệ trễ $\sim$19\% trên cả hai tập.
+
+\textbf{Bảy chỉ số} (thứ tự ưu tiên khi đọc kết quả):
+
+\begin{center}
+\scriptsize\slideTablePad
+\renewcommand{\arraystretch}{1.28}
+\begin{tabular}{|c|l|p{0.48\linewidth}|}
+\hline
+\textbf{\#} & \textbf{Chỉ số} & \textbf{Lý do} \\
+\hline
+1 & \textbf{AUC-ROC} & Không phụ thuộc ngưỡng; không bị ảnh hưởng mất cân bằng. \\
+\hline
+2 & \textbf{Average Precision} & Nhạy hơn AUC với lớp minority (delay). \\
+\hline
+3 & \textbf{F1-score (Delayed)} & Cân bằng Precision và Recall cho lớp quan tâm. \\
+\hline
+4 & \textbf{Recall (Delayed)} & Bỏ sót delay (FN) nguy hiểm hơn báo nhầm (FP). \\
+\hline
+5 & \textbf{Log Loss / Brier} & Chất lượng xác suất dự đoán. \\
+\hline
+6 & \textbf{Accuracy} & Ít giá trị --- chỉ tham khảo. \\
+\hline
+7 & \textbf{Training time} & So sánh chi phí huấn luyện giữa các thuật toán. \\
+\hline
+\end{tabular}
+\end{center}
+\normalsize
+
+\vspace{2mm}
+\begin{block}{Luồng tóm tắt}
+Kho $\to$ stratified 500K $\to$ tiền xử lý $\to$ 10 feature + nhãn $\to$ 80/20 $\to$ huấn luyện 5 mô hình $\to$ 7 chỉ số + Confusion Matrix + FI.
 \end{block}
 \end{frame}
 
-% --- Slide 24 ---
-\begin{frame}{Kết quả so sánh mô hình}
-\small
+% --- Kết quả ---
+\begin{frame}{Kết quả so sánh hiệu suất}
 \begin{table}
 \centering
-\begin{tabular}{lcccccc}
-\toprule
-\textbf{Mô hình} & \textbf{AUC} & \textbf{Acc.} & \textbf{F1} & \textbf{Avg.P} & \textbf{Log Loss} & \textbf{TG (s)} \\
-\midrule
-Logistic Regression & 0.6978 & 0.6570 & 0.6914 & 0.4120 & 0.6233 & \textbf{2.7} \\
-Random Forest       & 0.7130 & 0.6375 & 0.6756 & 0.4107 & 0.6216 & 13.0 \\
-Neural Network      & 0.7342 & \textbf{0.8318} & \textbf{0.7877} & 0.4809 & \textbf{0.4197} & 33.5 \\
-XGBoost             & \textbf{0.7545} & 0.7054 & 0.7324 & \textbf{0.5078} & 0.5721 & 7.1 \\
-LightGBM            & 0.7509 & 0.7031 & 0.7305 & 0.5014 & 0.5770 & 4.1 \\
-\bottomrule
+\scriptsize\slideTablePad
+\begin{tabular}{|l|r|r|r|r|r|r|r|}
+\hline
+\textbf{Mô hình} & \textbf{AUC} & \textbf{Acc.} & \textbf{F1} & \textbf{Avg.P} & \textbf{LogLoss} & \textbf{Brier} & \textbf{TG(s)} \\
+\hline
+Logistic Regression & 0.6982 & 0.6562 & 0.6923 & 0.4046 & 0.6216 & 0.2160 & \textbf{2.6} \\
+\hline
+Random Forest       & 0.7116 & 0.6429 & 0.6818 & 0.4003 & 0.6209 & 0.2160 & 11.3 \\
+\hline
+Neural Network      & 0.7332 & \textbf{0.8361} & \textbf{0.7920} & 0.4725 & \textbf{0.4130} & \textbf{0.1275} & 21.1 \\
+\hline
+XGBoost             & \textbf{0.7553} & 0.7055 & 0.7341 & \textbf{0.4999} & 0.5707 & 0.1939 & 6.7 \\
+\hline
+LightGBM            & 0.7519 & 0.7005 & 0.7300 & 0.4934 & 0.5760 & 0.1961 & 3.0 \\
+\hline
 \end{tabular}
 \end{table}
 
-\vspace{2mm}
+\vspace{1mm}
 \begin{itemize}
-  \item \textbf{XGBoost} dẫn đầu AUC-ROC (0,7545) và Avg. Precision (0,5078).
-  \item \textbf{LightGBM} sát sau nhưng nhanh hơn đáng kể (4,1s vs. 7,1s).
-  \item \textbf{Neural Network}: Accuracy/F1 cao nhất nhưng AUC thứ 3 --- thiên về lớp đa số.
+  \item \textbf{XGBoost:} AUC (0{,}7553) \& Avg.P (0{,}4999) cao nhất.
+  \item \textbf{LightGBM:} AUC 0{,}7519, huấn luyện \textbf{3{,}0s} vs.\ 6{,}7s (XGB).
+  \item \textbf{Neural Network:} Acc/F1/LogLoss/Brier tốt nhất; AUC chỉ thứ ba (0{,}7332) --- thiên lớp đa số.
+  \item \textbf{LR:} nhanh nhất (2{,}6s), AUC thấp nhất (0{,}6982).
+  \item \textbf{RF:} AUC +0{,}0134 so LR, Acc thấp nhất nhóm (0{,}6429).
 \end{itemize}
 \end{frame}
 
-% --- Slide 25 ---
+% --- Confusion Matrix ---
 \begin{frame}{Confusion Matrix}
 \centering
-\includegraphics[width=\linewidth,keepaspectratio]{confusion_matrix.jpg}
+\includegraphics[width=\linewidth,keepaspectratio]{confusion_matrix.png}
 \end{frame}
 
-\begin{frame}{Confusion Matrix}
-\textbf{LR \& RF:}\\
-4 ô đồng đều --- chưa phân biệt rõ 2 lớp. AUC thấp nhất nhóm.
+\begin{frame}{Phân tích Confusion Matrix}
 
-\vspace{2mm}
-\textbf{Neural Network:}\\
-True Negative rất đậm, nhưng False Negative cao $\to$ \textbf{bỏ sót delay}.
-Accuracy 0,83 ``che giấu'' thiên lệch.
+\begin{itemize}
+      \item \textbf{LR \& RF:} bốn ô tương đối đồng đều --- chưa tách rõ hai lớp; FP còn đậm (báo nhầm đúng giờ $\to$ trễ).
+      AUC \textbf{0{,}6982} (LR, thấp nhất) và \textbf{0{,}7116} (RF, thấp thứ hai).
+      \item \textbf{Neural Network:} TN rất đậm, FP rất nhạt; FN đậm hơn TP $\to$ \textbf{bỏ sót delay}.
+      Acc \textbf{0{,}8361} cao nhưng che giấu thiên lệch; AUC \textbf{0{,}7332} (thứ ba).
+      \item \textbf{XGBoost \& LightGBM:} hai đường chéo cân đối nhất --- phân biệt \textit{cả hai lớp}.
+      AUC \textbf{0{,}7553} / \textbf{0{,}7519}.
+\end{itemize}
 
-\vspace{2mm}
-\textbf{XGBoost \& LightGBM:}\\
-Đường chéo \textbf{cân đối nhất} --- phân biệt tốt \textit{cả hai lớp}.
 
 \vspace{2mm}
 \begin{alertblock}{}
-\small Accuracy đơn thuần \textbf{gây hiểu nhầm} khi dữ liệu mất cân bằng.
+\footnotesize Trong vận hành, \textbf{bỏ sót delay} thường tốn hơn \textbf{báo nhầm} $\to$ ưu tiên mô hình cân bằng (GBDT), không chỉ Accuracy.
 \end{alertblock}
 \end{frame}
 
-% --- Slide 26 ---
-\begin{frame}{Feature Importance}
+% --- Feature Importance ---
+\begin{frame}{Feature Importance (ảnh)}
 \centering
-\includegraphics[width=\linewidth,keepaspectratio]{feature_importance.jpg}
+\includegraphics[width=\linewidth,keepaspectratio]{feature_importance.png}
 \end{frame}
 
-\begin{frame}{Feature Importance}
-\textbf{Top features (cả 2 model):}
-\begin{enumerate}
-  \item \texttt{distance} \& \texttt{elapsed\_time}\\
-        Chuyến dài = nhiều rủi ro hơn.
-  \item \texttt{dep\_hour}\\
-        Hiệu ứng tích lũy chiều/tối.
-  \item \texttt{airline\_enc}\\
-        OTP chênh 15--20\% giữa hãng.
-  \item \texttt{origin/dest\_enc}\\
-        Yếu tố địa lý quan trọng.
-\end{enumerate}
+\begin{frame}{Feature Importance: cách đọc \& Top drivers}
+\textbf{Thang đo khác nhau} (không so trực tiếp số tuyệt đối):
+\begin{itemize}\setlength\itemsep{0.12em}
+  \item \textbf{XGBoost --- weight (chuẩn hóa):} tần suất chia trong cây, tổng $\sim 1$; trục ngang $\sim 0{,}18$ (max).
+  \item \textbf{LightGBM --- split count:} số lần feature được chọn trong 300 cây (có thể $\sim$ nghìn).
+\end{itemize}
+$\Rightarrow$ Chỉ so sánh \textbf{thứ hạng} giữa hai model.
 
 \vspace{2mm}
-\texttt{is\_weekend}, \texttt{quarter} thấp nhất
-$\to$ đã ``bao hàm'' bởi \texttt{day\_of\_week}, \texttt{month}.
+\textbf{Đặc trưng thống trị:}
+\begin{itemize}\setlength\itemsep{0.12em}
+  \item \texttt{dep\_hour} --- quan trọng nhất (XGBoost); LightGBM cũng xếp cao.
+  \item \texttt{distance}, \texttt{elapsed\_time} --- luôn top~3.
+  \item \texttt{airline\_enc} --- khác biệt quy trình/tỉ lệ trễ giữa hãng.
+\end{itemize}
 
-\vspace{2mm}
-\textbf{Nhất quán với OLAP}: dashboard phát hiện xu hướng vĩ mô,
-model lượng hóa đóng góp.
+\vspace{1mm}
+\textbf{XGBoost} thiên \textbf{thời gian}; \textbf{LightGBM} thiên \textbf{origin\_enc}, \texttt{elapsed\_time} (hub, quy mô chặng).
+
+\vspace{1mm}
+\texttt{is\_weekend}, \texttt{quarter} yếu nhất; mùa vụ thể hiện rõ hơn ở \texttt{month}.
 \end{frame}
 
-% --- Slide 27 ---
+% --- Tổng hợp GBDT ---
 \begin{frame}{Tại sao Gradient Boosting tốt nhất?}
-\begin{enumerate}
-  \item \textbf{Nắm bắt quan hệ phi tuyến}\\
-        Delay vs. đặc trưng không tuyến tính --- LR không biểu diễn được.
-
-  \item \textbf{Tự phát hiện interaction features}\\
-        VD: hãng F9 + tháng 12 + sân bay ORD $\to$ delay cao.
-
-  \item \textbf{Boosting tuần tự vs. Bagging song song}\\
-        Mỗi cây sửa lỗi cây trước $\to$ hội tụ tốt hơn RF.
-
-  \item \textbf{Xử lý mất cân bằng lớp tích hợp}\\
-        \texttt{scale\_pos\_weight}, \texttt{is\_unbalance} điều chỉnh gradient theo tỷ lệ lớp.
-
-  \item \textbf{LightGBM: tốc độ vượt trội}\\
-        Leaf-wise + histogram: 4,1s vs. 7,1s, chỉ thua 0,004 AUC.
+\small
+\begin{enumerate}\setlength\itemsep{0.25em}
+  \item \textbf{Quan hệ phi tuyến} --- LR không đủ biên quyết định tuyến tính; GBDT chia vùng dữ liệu.
+  \item \textbf{Interaction tự học} --- ví dụ hãng $\times$ tháng $\times$ hub (không cần feature tay).
+  \item \textbf{Boosting vs Bagging} --- cây sau sửa residual cây trước; RF vote trung bình độc lập.
+  \item \textbf{Cân bằng lớp} --- \texttt{scale\_pos\_weight}, \texttt{is\_unbalance} chỉnh gradient.
+  \item \textbf{LightGBM:} leaf-wise + histogram $\to$ \textbf{3{,}0s} vs.\ \textbf{6{,}7s} (XGB), AUC chỉ kém \textbf{0{,}0034} (0{,}7519 vs.\ 0{,}7553).
 \end{enumerate}
 \end{frame}
 
-% --- Slide 28 ---
+% --- Giới hạn ---
 \begin{frame}{Những trường hợp mô hình còn sai}
-Dù Gradient Boosting tốt nhất, AUC $\approx$ 0,75 vẫn còn khoảng cách:
+\small
+Dù Gradient Boosting Decision Tree đạt hiệu suất tốt nhất, AUC $\approx 0{,}76$ vẫn còn khoảng cách tới lý tưởng.
 
-\vspace{3mm}
+\vspace{2mm}
 \begin{columns}[T,onlytextwidth]
 \begin{column}{0.48\textwidth}
-\begin{block}{Nguyên nhân sai}
-\begin{itemize}
-  \item \textbf{Thời tiết cực đoan} đột xuất\\
-        (bão tuyết, mưa đá bất ngờ).
-  \item \textbf{Delay vận hành nội bộ}\\
-        (thiếu phi hành đoàn, bảo trì đột xuất).
+\begin{block}{Hạn chế}
+\begin{itemize}\setlength\itemsep{0.15em}
+  \item Thời tiết cực đoan đột xuất (không có feature thời tiết thực).
+  \item Delay nội bộ (thiếu tổ bay, bảo trì) --- không có trên lịch.
 \end{itemize}
 \end{block}
 \end{column}
 \begin{column}{0.48\textwidth}
-\begin{block}{Nguyên nhân sai (tt.)}
-\begin{itemize}
-  \item \textbf{Sân bay/hãng ít dữ liệu}\\
-        Encoding không đại diện.
-  \item \textbf{Ngày lễ đặc biệt}\\
-        Thanksgiving, Giáng sinh: hành vi delay khác biệt.
+\begin{block}{Hạn chế (tt.)}
+\begin{itemize}\setlength\itemsep{0.15em}
+  \item Hub/hãng ít mẫu --- encoding kém đại diện.
+  \item Ngày lễ đặc biệt (Thanksgiving, Giáng sinh) --- chưa có feature riêng.
 \end{itemize}
 \end{block}
 \end{column}
 \end{columns}
 
 \vspace{3mm}
-$\Rightarrow$ Gợi ý: tích hợp dữ liệu thời tiết, thêm feature ngày lễ.
+$\Rightarrow$ Hướng cải thiện: bổ sung thông tin thời tiết, feature ngày lễ.
 \end{frame}

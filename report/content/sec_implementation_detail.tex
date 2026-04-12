@@ -10,14 +10,254 @@ luồng ETL, lược đồ vật lý trong SQLite, truy vấn OLAP tham chiếu,
 \subsubsection{Ánh xạ tệp và công nghệ nền}
 
 \begin{itemize}
-  \item \textbf{Nguồn:} \texttt{data/flights.csv}, \texttt{data/airlines.csv}, \texttt{data/airports.csv}.
-  \item \textbf{ETL:} thư mục \texttt{etl/} (\texttt{extract.py}, \texttt{transform.py}, \texttt{load.py}),
+  \item \textbf{Nguồn:} \texttt{data/flights.csv}, \texttt{data/airlines.csv}, \texttt{data/airports.csv};
+        và tệp tra cứu bổ sung \texttt{data/L\_AIRPORT\_ID.xls} (định dạng CSV theo chuẩn BTS: cột \texttt{Code}, \texttt{Description})
+        để quy đổi \textbf{Airport ID} (số) sang mã IATA trước khi join \texttt{dim\_airport}.
+  \item \textbf{ETL:} thư mục \texttt{etl/} (\texttt{extract.py}, \texttt{transform.py}, \texttt{load.py}, \texttt{airport\_id\_lookup.py}),
         điều phối bởi \texttt{pipeline.py}; ngôn ngữ Python 3.10+, thư viện \texttt{pandas}, \texttt{numpy}.
   \item \textbf{Kho:} SQLite \texttt{warehouse/airline\_dw.db}, DDL trong \texttt{warehouse/schema.sql}.
   \item \textbf{OLAP tham chiếu:} \texttt{queries/olap\_queries.sql} (9 nhóm truy vấn).
   \item \textbf{Dashboard:} Streamlit + Plotly, điểm vào \texttt{dashboard/app.py}, các trang trong \texttt{dashboard/}.
   \item \textbf{Khai phá:} thư mục \texttt{mining/} (huấn luyện, so sánh mô hình, artifact \texttt{.pkl}, báo cáo HTML).
 \end{itemize}
+
+\subsubsection{Khảo sát dữ liệu nguồn}
+\label{subsubsec:eda_source_impl}
+
+Trước khi chạy ETL, nhóm thực hiện khảo sát toàn bộ \texttt{flights.csv}
+($5{,}819{,}079$ dòng) bằng script \texttt{scripts/eda\_before\_etl.py}
+nhằm xác định chất lượng dữ liệu, phát hiện giá trị thiếu và ngoại lệ,
+đồng thời \textbf{minh chứng hóa} từng quyết định làm sạch trong ETL
+thay vì chỉ mô tả định tính.
+
+\begin{figure}[H]
+  \centering
+  \caption{Tỷ lệ thiếu theo từng nhóm cột (\texttt{flights.csv}, $N = 5{,}819{,}079$)}
+  \vspace{4pt}
+  \includegraphics[width=\linewidth]{img/missing_before_etl.png}
+  \label{tab:eda_missing_impl}
+\end{figure}
+
+\noindent
+Cột thành phần delay có $81{,}72\%$ thiếu là hiện tượng \textbf{thiếu có cấu trúc}:
+dữ liệu nguồn chỉ ghi nhận chi tiết khi chuyến bay thực sự trễ do nguyên nhân đó
+--- ô trống đồng nghĩa ``không có trễ loại này'', hoàn toàn khác với thiếu ngẫu nhiên.
+ETL quy ước điền~0 để đồng nhất kiểu dữ liệu và phục vụ tổng hợp OLAP.
+
+% ---------- Phân phối và ngoại lệ ----------
+\paragraph{Phân phối và ngoại lệ cột số.}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{../data/eda_output/figures/eda_delay_dist.png}
+    \caption{Phân phối \texttt{DEPARTURE\_DELAY} (trái) và \texttt{ARRIVAL\_DELAY} (phải)
+             trên toàn bộ $5{,}8$ triệu bản ghi (histogram clip $[-80, 300]$ phút để đọc hình dạng).}
+    \label{fig:eda_delay_dist_impl}
+\end{figure}
+
+Bảng~\ref{tab:eda_numeric_impl} tóm tắt các chỉ số thống kê và kết quả kiểm tra ngoại lệ.
+
+\begin{table}[H]
+\centering
+\caption{Thống kê mô tả và ngoại lệ các cột số chính ($N$ hợp lệ)}
+\vspace{4pt}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{|l|r|r|r|r|r|r|}
+\hline
+\textbf{Cột} & \textbf{TB} & \textbf{SD} & \textbf{Min} & \textbf{Max}
+             & \textbf{\% âm} & \textbf{Ngoài IQR (\%)} \\ \hline
+\texttt{DEPARTURE\_DELAY}   & $9{,}4$   & $37{,}1$  & $-82$  & $1{,}988$  & $57{,}2$ & $12{,}8$ \\ \hline
+\texttt{ARRIVAL\_DELAY}     & $4{,}4$   & $39{,}3$  & $-87$  & $1{,}971$  & $61{,}3$ & $ 9{,}0$ \\ \hline
+\texttt{DISTANCE}           & $822$     & $608$     & $21$   & $4{,}983$  & $0{,}0$  & $ 6{,}0$ \\ \hline
+\texttt{ELAPSED\_TIME}      & $137$     & $74{,}2$  & $14$   & $766$      & $0{,}0$  & $ 5{,}1$ \\ \hline
+\end{tabular}
+\label{tab:eda_numeric_impl}
+\end{table}
+
+\noindent
+Ba nhận xét từ kết quả trên:
+
+\begin{enumerate}
+    \item \textbf{Delay âm là hợp lệ.}
+          $57{,}2\%$ \texttt{DEPARTURE\_DELAY} và $61{,}3\%$ \texttt{ARRIVAL\_DELAY} mang giá trị âm
+          --- máy bay khởi hành/đến \textit{sớm hơn} lịch trình.
+          ETL \textbf{giữ nguyên} các giá trị này thay vì clip về~0.
+
+    \item \textbf{Delay cực lớn tồn tại nhưng chiếm tỷ lệ nhỏ.}
+          Có $271$ bản ghi \texttt{DEPARTURE\_DELAY} $> 1{,}000$ phút ($< 0{,}01\%$)
+          --- chuyến bị hoãn qua ngày do sự cố nghiêm trọng; đây là dữ liệu thật.
+          Mô hình dự báo sử dụng nhãn nhị phân \texttt{is\_delayed\_15},
+          nên giá trị cực đoan được ``trung hoà'' qua phép rời rạc hóa.
+
+    \item \textbf{Phân phối đuôi nặng (heavy-tailed).}
+          Độ lệch chuẩn của \texttt{DEPARTURE\_DELAY} ($37{,}1$ phút) lớn hơn nhiều so với
+          trung vị ($-2$ phút), xác nhận phân phối lệch phải mạnh.
+          Mô hình cây (Gradient Boosting) xử lý tốt kiểu phân phối này mà không cần biến đổi log.
+\end{enumerate}
+
+% ---------- Phân bố giờ khởi hành ----------
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{../data/eda_output/figures/eda_dep_hour_dist.png}
+    \caption{Phân bố theo giờ khởi hành (\texttt{dep\_hour}, trích từ \texttt{SCHEDULED\_DEPARTURE}).
+             Chuyến sáng sớm (0--7h) ít delay nhất do chưa chịu hiệu ứng tích lũy trong ngày.}
+    \label{fig:eda_dep_hour_impl}
+\end{figure}
+
+% ---------- Cột categorical ----------
+\paragraph{Cột phân loại và phân bố lưu lượng.}
+
+\begin{itemize}
+    \item \textbf{Hãng hàng không:} 14 hãng duy nhất, không có giá trị thiếu.
+          Southwest (WN) chiếm $1{,}261{,}855$ chuyến (lớn nhất),
+          tiếp theo là Delta (DL, $875{,}881$) và American (AA, $725{,}984$).
+
+    \item \textbf{Sân bay:} Top~5 theo lưu lượng: ATL ($346{,}836$), ORD ($285{,}884$),
+          DFW ($239{,}551$), DEN ($196{,}055$), LAX ($194{,}673$) ---
+          các sân bay hub lớn nhất nước Mỹ.
+
+    \item \textbf{Tháng:} Tháng~7 cao điểm nhất ($520{,}718$ chuyến),
+          phân bố tương đối đều qua 12 tháng (xấp xỉ $480{,}000$--$520{,}000$/tháng).
+
+    \item \textbf{Lý do hủy chuyến (\texttt{CANCELLATION\_REASON}):}
+          $98{,}46\%$ bản ghi để trống (chuyến không bị hủy).
+          Trong số chuyến bị hủy ($89{,}884$ bản ghi):
+          B/Thời tiết chiếm nhiều nhất ($48{,}851$),
+          tiếp theo A/Hãng ($25{,}262$) và C/NAS ($15{,}749$).
+\end{itemize}
+
+% ---------- Chất lượng JOIN ----------
+\paragraph{Chất lượng JOIN flights $\leftrightarrow$ airlines/airports.}
+
+Đây là bước kiểm tra quan trọng: những bản ghi không map được sang bảng chiều
+sẽ bị loại trong \texttt{transform\_chunk} (\texttt{dropna} trên các FK).
+
+\begin{table}[H]
+\centering
+\caption{Kết quả kiểm tra join giữa \texttt{flights.csv} và bảng tra cứu}
+\vspace{4pt}
+\small
+\begin{tabular}{|l|r|r|r|p{3cm}|}
+\hline
+\textbf{Phép join} & \textbf{Tổng dòng} & \textbf{Khớp} & \textbf{Không khớp (\%)} & \textbf{Nguyên nhân} \\ \hline
+flights $\to$ \texttt{dim\_airline}
+  & $5{,}819{,}079$ & $5{,}819{,}079$ & $0\,(0{,}00\%)$
+  & Tất cả 14 mã IATA đều khớp \\ \hline
+flights $\to$ \texttt{dim\_airport} (đi)
+  & $5{,}819{,}079$ & $5{,}332{,}914$ & $486{,}165\,(8{,}36\%)$
+  & Mã số nguyên (không phải IATA) \\ \hline
+flights $\to$ \texttt{dim\_airport} (đến)
+  & $5{,}819{,}079$ & $5{,}332{,}914$ & $486{,}165\,(8{,}36\%)$
+  & Cùng nguyên nhân trên \\ \hline
+\end{tabular}
+\label{tab:eda_join_impl}
+\end{table}
+
+\noindent
+$486{,}165$ bản ghi không map được do một phần dữ liệu nguồn ghi sân bay bằng
+\textbf{mã số nguyên} (ví dụ: \texttt{10397}, \texttt{13930}) thay vì mã IATA ba chữ cái,
+trong khi \texttt{airports.csv} chỉ chứa mã IATA.
+Sau khi loại bỏ các dòng này, kho dữ liệu giữ lại $5{,}332{,}914$ bản ghi
+($91{,}65\%$ so với nguồn) --- đây là kết quả join \textbf{trực tiếp} IATA--IATA
+(chưa áp dụng tra cứu \texttt{L\_AIRPORT\_ID}); con số trong Bảng~\ref{tab:etl_stats}
+phản ánh cùng baseline đó trước khi bổ sung bước chuẩn hóa mã ở Mục~\ref{subsubsec:airport_id_etl}.
+
+% ---------- Chuẩn hóa Airport ID (L_AIRPORT_ID) ----------
+\subsubsection{Chuẩn hóa mã sân bay}
+\label{subsubsec:airport_id_etl}
+
+Một phần bản ghi trong \texttt{flights.csv} ghi \texttt{ORIGIN\_AIRPORT} / \texttt{DESTINATION\_AIRPORT}
+bằng \textbf{mã số Airport ID} từ Bảng tra cứu của Cục Thống kê Vận tải Hoa Kỳ \cite{lookup_tables2015} (ví dụ \texttt{10397}, \texttt{13930}, \texttt{14747}),
+trong khi \texttt{airports.csv} và \texttt{dim\_airport} chỉ dùng mã \textbf{IATA ba chữ cái}.
+Để giảm số dòng bị loại do \texttt{map} sang \texttt{airport\_map} thất bại (tập trung vào các bản ghi vào tháng 10 năm 2015), pipeline bổ sung:
+
+\begin{itemize}
+  \item \textbf{Tệp tra cứu:} \texttt{data/L\_AIRPORT\_ID.xls} --- mỗi dòng có \texttt{Code} (ID nguyên)
+        và \texttt{Description} dạng ``\textit{Thành phố, ST: Tên sân bay}''.
+
+  \item \textbf{Module:} \texttt{etl/airport\_id\_lookup.py}:
+        tách phần sau dấu ``\texttt{: }'' trong \texttt{Description}, giá trị đã là IATA (ba chữ) giữ nguyên,
+        giá trị là số thì \textbf{chuẩn hóa tên} cho khớp với cột \texttt{AIRPORT} trong \texttt{airports.csv},
+        để ghi nhận ghi nhận \texttt{Airport ID} $\rightarrow$ IATA.
+  \item \textbf{Giới hạn:} chỉ những ID mà tên sân bay (sau chuẩn hóa) \textbf{khớp được}
+        với tập \texttt{airports.csv} ($322$ sân bay trong bộ Kaggle) mới quy đổi được;
+        các sân bay chỉ có trong BTS lookup mà không có trong \texttt{airports.csv}
+        vẫn không có surrogate key --- dòng tương ứng vẫn bị \texttt{dropna} như cũ.
+\end{itemize}
+
+\noindent
+Ví dụ quy đổi đã kiểm chứng trên mã nguồn:
+\texttt{10397}$\rightarrow$\texttt{ATL},
+\texttt{13930}$\rightarrow$\texttt{ORD},
+\texttt{11298}$\rightarrow$\texttt{DFW},
+\texttt{12892}$\rightarrow$\texttt{LAX},
+\texttt{14747}$\rightarrow$\texttt{SEA}.
+
+% ---------- Tổng hợp quyết định ETL ----------
+\noindent \textbf{Tổng hợp quyết định ETL từ kết quả EDA:} Bảng~\ref{tab:eda_etl_decisions} liệt kê đầy đủ các quyết định thiết kế đã được
+hiện thực trong \texttt{etl/transform.py} và \texttt{etl/extract.py},
+cùng căn cứ thống kê từ kết quả EDA ở trên.
+
+\begin{table}[H]
+\centering
+\caption{Tổng hợp quyết định ETL dựa trên EDA ($N = 5{,}819{,}079$)}
+\vspace{4pt}
+\small
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{|p{3.8cm}|p{3.2cm}|p{7.2cm}|}
+\hline
+\textbf{Vấn đề phát hiện} & \textbf{Chỉ số EDA} & \textbf{Quyết định ETL} \\ \hline
+
+\texttt{CANCELLATION\_REASON} thiếu rất nhiều
+  & $98{,}46\%$ missing
+  & Không nạp cột này vào bảng chiều; thông tin hủy chuyến được suy từ
+    cột \texttt{CANCELLED} trong \texttt{fact\_flights} \\ \hline
+
+5 cột thành phần delay\newline
+(\texttt{*\_DELAY}) thiếu nhiều
+  & $81{,}72\%$ missing
+  & \texttt{fillna(0)}: NaN có nghĩa nghiệp vụ là ``không có trễ loại này'',
+    không phải mất dữ liệu --- khác hoàn toàn với thiếu ngẫu nhiên \\ \hline
+
+\texttt{DEPARTURE\_DELAY} và\newline \texttt{ARRIVAL\_DELAY} mang giá trị âm
+  & $57{,}2\%$ và $61{,}3\%$ âm
+  & \textbf{Giữ nguyên}: giá trị âm biểu thị máy bay \textit{khởi hành/đến sớm}
+    hơn lịch --- hoàn toàn hợp lệ về nghiệp vụ \\ \hline
+
+Delay cực lớn ($>1{,}000$ phút)
+  & $271$ bản ghi ($< 0{,}01\%$)
+  & \textbf{Giữ nguyên}: chuyến hoãn qua ngày do sự cố thật;
+    nhãn nhị phân \texttt{is\_delayed\_15} trung hoà tác động của giá trị cực đoan \\ \hline
+
+\texttt{ARRIVAL\_DELAY} và\newline thời gian bay thiếu thấp
+  & $1{,}81\%$ missing
+  & \texttt{fillna(0)} cho các cột delay; \texttt{fillna(median)} cho
+    \texttt{ELAPSED\_TIME} và \texttt{AIR\_TIME}
+    (thiếu thường do chuyến hủy/chuyển hướng) \\ \hline
+
+Kho dữ liệu --- chuẩn hóa?
+  & Phân phối lệch phải, đơn vị khác nhau
+  & \textbf{Không normalize} trong DW --- lưu giá trị thô nguyên bản;
+    chuẩn hóa (\texttt{StandardScaler}) chỉ áp dụng trong pipeline khai phá
+    cho Logistic Regression và MLP \\ \hline
+
+JOIN airport: mã số từ Bảng tra cứu\newline (không phải IATA)
+  & $8{,}36\%$ không khớp\newline ($486{,}165$ dòng) nếu \textbf{chỉ} join IATA
+  & \textbf{Bổ sung} \texttt{L\_AIRPORT\_ID.xls} + \texttt{airport\_id\_lookup.py}:
+    map ID$\rightarrow$IATA rồi mới \texttt{map(airport\_map)}; vẫn \texttt{dropna}
+    nếu ID không khớp tên với \texttt{airports.csv}. \\ \hline
+
+Chuyến bị hủy (\texttt{CANCELLED=1})
+  & $89{,}884$ chuyến ($1{,}54\%$)
+  & \textbf{Vẫn nạp vào \texttt{fact\_flights}}; gán
+    \texttt{is\_delayed\_15 = 0} vì chuyến hủy không phát sinh trễ thực tế
+    (không có \texttt{ARRIVAL\_DELAY} hợp lệ) \\ \hline
+
+\end{tabular}
+\label{tab:eda_etl_decisions}
+\end{table}
 
 % --- ETL ---
 \subsubsection{Pipeline ETL}
@@ -37,9 +277,10 @@ PRAGMA synchronous = NORMAL;
 \end{lstlisting}
 
 \paragraph{Bước 3 --- Nạp dimension và lookup maps.}
-Sau khi nạp các bảng chiều, pipeline truy vấn để xây dictionary ánh xạ surrogate key (khóa thay thế):
-\texttt{airline\_map}, \texttt{airport\_map}, \texttt{date\_map}, \texttt{delay\_reason\_map};
-dùng trong bước 4 với \texttt{pandas.Series.map()} (vectorized).
+Sau khi tải các bảng chiều (dimension tables), pipeline tiến hành truy vấn và khởi tạo các từ điển ánh xạ (lookup dictionaries) giữa khóa tự nhiên và surrogate key, bao gồm: \texttt{airline\_map}, \texttt{airport\_map}, \texttt{date\_map} và \texttt{delay\_reason\_map}.
+Song song đó, hàm \texttt{build\_faa\_id\_to\_iata(\ldots)} được sử dụng để hợp nhất dữ liệu từ \texttt{L\_AIRPORT\_ID.xls} và \texttt{airports.csv}, nhằm chuẩn hóa các mã Airport ID dạng số (từ Bảng tra cứu) về mã IATA gồm 3 ký tự. Việc này đảm bảo các bản ghi sử dụng ID số không bị thất lạc khi ánh xạ vào \texttt{dim\_airport}.  
+
+Các lookup map này đóng vai trò trung tâm trong bước tiếp theo, cho phép ánh xạ khóa theo cơ chế vector hóa thông qua \texttt{pandas.Series.map()}, từ đó đảm bảo hiệu năng cao khi xử lý dữ liệu theo từng chunk.
 
 \paragraph{Bước 4 --- Streaming \texttt{fact\_flights}.}
 Vòng lặp: đọc chunk $\rightarrow$ \texttt{transform\_chunk} $\rightarrow$ INSERT batch $\rightarrow$ giải phóng RAM.
@@ -49,7 +290,8 @@ INSERT_BATCH = 50_000    # row/INSERT into SQLite
 
 for chunk in stream_flights(chunksize=CHUNK_SIZE):
     fact = transform_chunk(chunk, airline_map, airport_map,
-                           date_map, delay_reason_map)
+                           date_map, delay_reason_map,
+                           faa_id_to_iata=faa_id_to_iata)
     del chunk
     load_fact_flights(conn, fact, chunksize=INSERT_BATCH)
     del fact
@@ -57,7 +299,7 @@ for chunk in stream_flights(chunksize=CHUNK_SIZE):
 
 \paragraph{Tối ưu kiểu dữ liệu (\texttt{extract.py}).}
 Dùng \texttt{float32}/\texttt{int8}/\texttt{int16} thay mặc định \texttt{float64}/\texttt{int64} để giảm RAM mỗi chunk
-(khoảng 120~MB thay vì $\approx$300~MB với chunk 100\,000 dòng).
+(khoảng 120~MB thay vì $\sim$ 300~MB với chunk 100\,000 dòng).
 
 \paragraph{Phân loại nguyên nhân trễ (vectorized).}
 Dùng \texttt{numpy.select} thay \texttt{apply} theo dòng:
@@ -78,6 +320,8 @@ df["delay_reason_key"] = np.select(
 \begin{itemize}
   \item Các cột delay: \texttt{fillna(0.0)} (\texttt{NaN} $\equiv$ không có trễ loại đó).
   \item Bản ghi thiếu \texttt{AIRLINE}, \texttt{ORIGIN\_AIRPORT} hoặc \texttt{DESTINATION\_AIRPORT}: loại ở \texttt{extract.py}.
+  \item \textbf{Chuẩn hóa mã sân bay:} nếu điểm đi/đến là số (Airport ID từ Bảng tra cứu), quy đổi sang IATA
+        bằng \texttt{L\_AIRPORT\_ID} + \texttt{airport\_id\_lookup.py} trước khi tra \texttt{airport\_map}.
   \item Không map được FK chiều: \texttt{dropna(subset=[...])} trong \texttt{transform\_chunk}.
 \end{itemize}
 
@@ -90,10 +334,11 @@ khối lượng dữ liệu trước và sau làm sạch.
 \begin{table}[H]
 \centering
 \caption{Thống kê dữ liệu sau quá trình ETL}
+\vspace{4pt}
 \begin{tabular}{|l|r|r|r|}
 \hline
 \textbf{Bảng} & \textbf{Bản ghi thô} & \textbf{Bản ghi sau làm sạch} & \textbf{Tỷ lệ giữ lại} \\ \hline
-\texttt{fact\_flights} & 5.819.079 & 5.332.914 & 91{,}65\% \\ \hline
+\texttt{fact\_flights} & 5.819.079 & 5.657.773 & 97{,}23\% \\ \hline
 \texttt{dim\_airline}  & 14        & 14             & 100\%  \\ \hline
 \texttt{dim\_airport}  & 322       & 322            & 100\%  \\ \hline
 \texttt{dim\_date}     & 365       & 365            & 100\%  \\ \hline
@@ -101,8 +346,7 @@ khối lượng dữ liệu trước và sau làm sạch.
 \label{tab:etl_stats}
 \end{table}
 
-Khoảng \textbf{486.165} bản ghi ($\approx$ 8{,}35\%) bị loại so với tệp
-\texttt{flights.csv} gốc do hai khối mã sau:
+Khoảng \textbf{324.859} bản ghi ($\sim$ 5{,}58\%) được giữ lại so với xử lý gốc trong baseline \textbf{chỉ join IATA} (Bảng~\ref{tab:eda_join_impl}). Ba khối mã xử lý loại bỏ dữ liệu gồm:
 
 \begin{itemize}
     \item \textbf{\texttt{etl/extract.py}} --- hàm \texttt{stream\_flights}:
@@ -110,27 +354,97 @@ Khoảng \textbf{486.165} bản ghi ($\approx$ 8{,}35\%) bị loại so với t�
           \texttt{DESTINATION\_AIRPORT}; đồng thời bỏ các bản ghi có
           \texttt{MONTH}/\texttt{DAY} ngoài khoảng hợp lệ.
     \item \textbf{\texttt{etl/transform.py}} --- hàm \texttt{transform\_chunk}:
-          sau khi tra \texttt{.map()} sang khóa surrogate (khóa thay thế), loại các dòng
-          \textbf{không map được} tới \texttt{dim\_airline}, \texttt{dim\_airport}
-          hoặc \texttt{dim\_date} (\texttt{dropna} trên
-          \texttt{airline\_key}, \texttt{origin\_airport\_key},
+          trước \texttt{.map(airport\_map)}, có thể quy đổi mã số Airport ID sang IATA
+          (\texttt{airport\_id\_lookup.resolve\_airport\_codes}); sau đó tra \texttt{.map()}
+          sang khóa surrogate và loại các dòng \textbf{không map được} tới
+          \texttt{dim\_airline}, \texttt{dim\_airport} hoặc \texttt{dim\_date}
+          (\texttt{dropna} trên \texttt{airline\_key}, \texttt{origin\_airport\_key},
           \texttt{dest\_airport\_key}, \texttt{date\_key}).
+    \item \textbf{\texttt{etl/load.py}} --- các hàm \texttt{load\_dim\_*} và \texttt{load\_fact\_flights}:
+          khởi tạo lược đồ vật lý từ \texttt{schema.sql}, nạp các bảng dimension và xây dựng lookup map phục vụ ánh xạ khóa.
+          Dữ liệu fact được ghi theo từng batch để đảm bảo hiệu quả bộ nhớ, kết hợp với các cấu hình SQLite (\texttt{WAL}, \texttt{synchronous=NORMAL}) nhằm tăng tốc độ ghi và hỗ trợ xử lý khối lượng dữ liệu lớn.
 \end{itemize}
 
-Nhãn mục tiêu \texttt{is\_delayed\_15} (chuyến bay trễ đến $\geq 15$ phút) có phân phối
-mất cân bằng đáng kể: khoảng \textbf{81\%} chuyến đúng giờ ($\approx$\,4{,}24M)
-so với \textbf{19\%} trễ ($\approx$\,1{,}00M) trên chuyến không bị hủy --- tỷ lệ này ảnh hưởng trực tiếp
-đến chiến lược đánh giá mô hình sẽ trình bày ở mục~\ref{subsec:chap4_mining}.
+% Nhãn mục tiêu \texttt{is\_delayed\_15} (chuyến bay trễ đến $\geq 15$ phút) có phân phối
+% mất cân bằng đáng kể: khoảng \textbf{81\%} chuyến đúng giờ ($\approx$\,4{,}24M)
+% so với \textbf{19\%} trễ ($\approx$\,1{,}00M) trên chuyến không bị hủy --- tỷ lệ này ảnh hưởng trực tiếp
+% đến chiến lược đánh giá mô hình sẽ trình bày ở mục~\ref{subsec:chap4_mining}.
 
 % --- DW physical ---
 \subsubsection{Lược đồ vật lý và chỉ mục}
 
-Bảng~\ref{tab:fact_flights_impl} và Bảng~\ref{tab:dimensions_impl} mô tả chi tiết cột;
-toàn bộ Data Definition Language nằm trong \texttt{warehouse/schema.sql}.
+Phần này trình bày tổng quan cấu trúc các bảng trong hệ thống, bao gồm bảng fact và các bảng dimension, kèm theo mô tả chi tiết từng cột.
+Toàn bộ Data Definition Language nằm trong \texttt{warehouse/schema.sql}.
+\begin{table}[H]
+\centering
+\caption{Cấu trúc bảng \texttt{dim\_airline}}
+\vspace{4pt}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Cột} & \textbf{Kiểu} & \textbf{Mô tả} \\ \hline
+\texttt{airline\_key}  & INTEGER PK AUTOINCREMENT & Surrogate key \\ \hline
+\texttt{airline\_iata} & TEXT UNIQUE NOT NULL & Mã IATA (AA, DL, ...) \\ \hline
+\texttt{airline\_name} & TEXT NOT NULL & Tên hãng \\ \hline
+\end{tabular}
+\end{table}
 
 \begin{table}[H]
 \centering
+\caption{Cấu trúc bảng \texttt{dim\_airport}}
+\vspace{4pt}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Cột} & \textbf{Kiểu} & \textbf{Mô tả} \\ \hline
+\texttt{airport\_key}  & INTEGER PK AUTOINCREMENT & Surrogate key \\ \hline
+\texttt{airport\_iata} & TEXT UNIQUE NOT NULL & Mã sân bay (IATA) \\ \hline
+\texttt{airport\_name} & TEXT & Tên sân bay \\ \hline
+\texttt{city}          & TEXT & Thành phố \\ \hline
+\texttt{state}         & TEXT & Bang \\ \hline
+\texttt{country}       & TEXT & Quốc gia (mặc định USA) \\ \hline
+\texttt{latitude}      & REAL & Vĩ độ \\ \hline
+\texttt{longitude}     & REAL & Kinh độ \\ \hline
+\end{tabular}
+\end{table}
+  
+\begin{table}[H]
+\centering
+\caption{Cấu trúc bảng \texttt{dim\_date}}
+\vspace{4pt}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Cột} & \textbf{Kiểu} & \textbf{Mô tả} \\ \hline
+\texttt{date\_key}     & INTEGER PK & Khóa YYYYMMDD \\ \hline
+\texttt{full\_date}    & TEXT NOT NULL & Ngày đầy đủ (YYYY-MM-DD) \\ \hline
+\texttt{year}          & INTEGER & Năm \\ \hline
+\texttt{quarter}       & INTEGER & Quý (1--4) \\ \hline
+\texttt{month}         & INTEGER & Tháng (1--12) \\ \hline
+\texttt{month\_name}   & TEXT & Tên tháng \\ \hline
+\texttt{week\_of\_year}& INTEGER & Tuần trong năm \\ \hline
+\texttt{day\_of\_month}& INTEGER & Ngày trong tháng \\ \hline
+\texttt{day\_of\_week} & INTEGER & Thứ (1=Mon) \\ \hline
+\texttt{day\_name}     & TEXT & Tên thứ \\ \hline
+\texttt{is\_weekend}   & INTEGER & Cờ cuối tuần (0/1) \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Cấu trúc bảng \texttt{dim\_delay\_reason}}
+\vspace{4pt}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Cột} & \textbf{Kiểu} & \textbf{Mô tả} \\ \hline
+\texttt{reason\_key}      & INTEGER PK AUTOINCREMENT & Surrogate key \\ \hline
+\texttt{reason\_code}     & TEXT UNIQUE NOT NULL & Mã (AIR\_SYSTEM, ...) \\ \hline
+\texttt{reason\_name}     & TEXT NOT NULL & Tên lý do \\ \hline
+\texttt{reason\_category} & TEXT & Nhóm (Operational, Carrier, ...) \\ \hline
+\end{tabular}
+\end{table}
+  
+\begin{table}[H]
+\centering
 \caption{Cấu trúc bảng \texttt{fact\_flights} (hiện thực)}
+\vspace{4pt}
 \begin{tabular}{|l|l|l|}
 \hline
 \textbf{Cột} & \textbf{Kiểu} & \textbf{Mô tả} \\ \hline
@@ -163,6 +477,7 @@ toàn bộ Data Definition Language nằm trong \texttt{warehouse/schema.sql}.
 \begin{table}[H]
 \centering
 \caption{Các bảng chiều (hiện thực)}
+\vspace{4pt}
 \begin{tabular}{|l|l|l|}
 \hline
 \textbf{Bảng} & \textbf{Bản ghi} & \textbf{Cột chính} \\ \hline
@@ -188,7 +503,7 @@ CREATE INDEX idx_fact_delayed   ON fact_flights(is_delayed_15);
 
 \subsubsection{Bộ truy vấn OLAP tham chiếu}
 
-Mã SQL đầy đủ trong repo: \texttt{queries/olap\_queries.sql}.
+Mã SQL đầy đủ trong repo: \texttt{queries/olap\_queries.sql}, được trực quan hóa qua Dashboard để dễ dàng quan sát.
 Phần dưới trình bày từng nhóm kèm \emph{ý nghĩa nghiệp vụ/OLAP} và đoạn SQL tương ứng (thống nhất logic với file nguồn).
 
 \input{content/olap_queries_body}
@@ -203,14 +518,14 @@ riêng trang Dự báo và Explorer không bị ảnh hưởng bởi lọc sideb
 
   \item \textbf{Tổng quan:}
   Hiển thị bức tranh toàn cảnh của kho dữ liệu.
-  Hàng đầu gồm 5 chỉ số KPI: \textbf{Tổng chuyến bay} ($5\,332\,914$),
-  \textbf{OTP toàn ngành} (tỷ lệ đúng giờ, $81{,}19\%$),
-  \textbf{Tỉ lệ delay $\geq$15p} ($18{,}81\%$),
-  \textbf{Tỉ lệ hủy chuyến} ($1{,}64\%$),
-  \textbf{Delay TB} ($4{,}8$ phút) --- các giá trị phản ứng theo bộ lọc sidebar.
+  Hàng đầu gồm 5 chỉ số KPI: \textbf{Tổng chuyến bay} (5.657.773),
+  \textbf{OTP toàn ngành} (tỷ lệ đúng giờ, $81{,}55\%$),
+  \textbf{Tỉ lệ delay $\geq$15p} ($18{,}45\%$),
+  \textbf{Tỉ lệ hủy chuyến} ($1{,}57\%$),
+  \textbf{Delay TB} ($4{,}5$ phút) --- các giá trị phản ứng theo bộ lọc sidebar.
   Phía dưới: biểu đồ \textbf{Cơ cấu chuyến bay theo tháng} (cột chồng ba lớp hủy / delay / đúng giờ);
   \textbf{Top 5 hãng theo OTP} (cột ngang); \textbf{Top 5 sân bay delay cao nhất};
-  đường xu hướng \textbf{Tỉ lệ delay \& hủy theo tháng}.
+  đường xu hướng \textbf{Tỉ lệ delay \& hủy theo tháng}, Top 10 sân bay nhộn nhịp nhất, Top 10 sân bay tổng delay cao nhất.
   \begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{img/dashboard/overview.png}
@@ -218,11 +533,18 @@ riêng trang Dự báo và Explorer không bị ảnh hưởng bởi lọc sideb
     \label{fig:dash_overview}
   \end{figure}
 
+  \begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{img/dashboard/overview2.png}
+    \caption{Trang Tổng quan: Top 5 sân bay delay cao nhất và Tỉ lệ delay \& hủy theo tháng.}
+    \label{fig:dash_overview2}
+  \end{figure}
+
   \item \textbf{Phân tích tuyến đường:}
   Phân tích top tuyến bay (cặp sân bay đi $\to$ đến) theo từng hãng.
   Bộ lọc địa lý đặt ngay trên trang (không dùng sidebar): chọn \textbf{Bang xuất phát} / \textbf{Bang đích đến},
   sau đó lọc tiếp theo từng sân bay cụ thể.
-  Hãng phân tích chọn ở sidebar; mỗi hãng được chọn sinh một khối biểu đồ riêng
+  Hãng phân tích chọn ở sidebar, mỗi hãng được chọn sinh ra một khối biểu đồ riêng
   với số tuyến và ngưỡng số chuyến tối thiểu có thể điều chỉnh.
   \begin{figure}[H]
     \centering
@@ -247,6 +569,13 @@ riêng trang Dự báo và Explorer không bị ảnh hưởng bởi lọc sideb
     \label{fig:dash_time}
   \end{figure}
 
+  \begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{img/dashboard/time2.png}
+    \caption{Trang Phân tích thời gian: Delay theo ngày trong tuần.}
+    \label{fig:dash_time2}
+  \end{figure}
+
   \item \textbf{Phân tích nguyên nhân:}
   Đi sâu vào cơ cấu gây trễ.
   Hai biểu đồ song song: pie cơ cấu số chuyến và cột ngang delay TB theo từng nguyên nhân
@@ -264,7 +593,7 @@ riêng trang Dự báo và Explorer không bị ảnh hưởng bởi lọc sideb
   Cho phép người dùng nhập thông tin và nhận dự báo delay ngay trên giao diện.
   Form gồm: hãng, bang đi/đến, tháng, thứ trong tuần, giờ khởi hành (slider 0--23),
   khoảng cách và thời gian bay.
-  Sau khi nhấn \textbf{Dự báo ngay}, hệ thống gọi \texttt{predict\_service}
+  Sau khi nhấn \textbf{Dự báo ngay}, hệ thống gọi \texttt{predict\_service} (sử dụng model XGBoost đã huấn luyện)
   và trả về nhãn dự đoán (đúng giờ / có delay), xác suất delay và mức độ rủi ro,
   minh họa thêm bằng đồng hồ gauge Plotly.
   \begin{figure}[H]
@@ -278,7 +607,7 @@ riêng trang Dự báo và Explorer không bị ảnh hưởng bởi lọc sideb
   Công cụ tra cứu trực tiếp kho dữ liệu.
   Hiển thị sơ đồ Star Schema dạng ASCII và số dòng thực tế của từng bảng
   (\texttt{dim\_airline}: 14, \texttt{dim\_airport}: 322, \texttt{dim\_date}: 365,
-  \texttt{dim\_delay\_reason}: 6, \texttt{fact\_flights}: $5\,332\,914$).
+  \texttt{dim\_delay\_reason}: 6, \texttt{fact\_flights}: $5\,657\,773$).
   Cho phép xem trước nội dung bất kỳ bảng nào với số dòng tùy chỉnh.
   Hỗ trợ nhập SQL tùy ý (chỉ \texttt{SELECT}); có nút Random/Clear/Execute và hiển thị kết quả tức thì.
   \begin{figure}[H]
@@ -286,6 +615,13 @@ riêng trang Dự báo và Explorer không bị ảnh hưởng bởi lọc sideb
     \includegraphics[width=\linewidth]{img/dashboard/database.png}
     \caption{Trang Database Explorer: sơ đồ star schema, thống kê bảng và SQL tùy chỉnh.}
     \label{fig:dash_explorer}
+  \end{figure}
+
+  \begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\linewidth]{img/dashboard/database2.png}
+    \caption{Trang Database Explorer: xem dữ liệu bảng dim\_airline}
+    \label{fig:dash_database2}
   \end{figure}
 
 \end{enumerate}
@@ -300,8 +636,8 @@ biết trước hoặc có tính tổng hợp theo ngữ cảnh (bang, hãng, th
 
 \begin{table}[H]
 \centering
-\caption{Mười đặc trưng đầu vào (hiện thực --- \texttt{compare\_5\_models.py})}
-\small
+\caption{Mười đặc trưng đầu vào}
+\vspace{4pt}
 \begin{tabular}{|l|l|l|}
 \hline
 \textbf{Đặc trưng} & \textbf{Kiểu} & \textbf{Lý do chọn} \\ \hline
@@ -319,7 +655,7 @@ biết trước hoặc có tính tổng hợp theo ngữ cảnh (bang, hãng, th
 \label{tab:features_impl}
 \end{table}
 
-Tham số huấn luyện tiêu biểu:
+\noindent Tham số huấn luyện tiêu biểu:
 \begin{itemize}
   \item Logistic Regression: \texttt{saga} solver, C=1.0, \texttt{class\_weight='balanced'}, \texttt{max\_iter=200}.
   \item Random Forest: 100 cây, \texttt{max\_depth=10}, \texttt{min\_samples\_leaf=50}, \texttt{class\_weight='balanced'}.
@@ -331,5 +667,5 @@ Tham số huấn luyện tiêu biểu:
         \texttt{is\_unbalance=True}.
 \end{itemize}
 
-Mất cân bằng lớp ($\approx$81\% / 19\% trên chuyến \texttt{is\_cancelled=0} trong kho): dùng trọng số lớp thay vì over/undersampling vật lý;
-đánh giá ưu tiên AUC-ROC và F1.
+Mất cân bằng lớp: dùng trọng số lớp thay vì over/undersampling vật lý;
+đánh giá ưu tiên AUC-ROC và F1-score.

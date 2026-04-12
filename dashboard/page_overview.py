@@ -238,3 +238,107 @@ def render_page_overview(f: FilterContext, query: Callable[[str], object]) -> No
                 legend=dict(orientation="h"),
             )
             st.plotly_chart(fig4, width='stretch')
+
+    st.divider()
+    col_top_flights, col_top_delay = st.columns(2)
+
+    with col_top_flights:
+        st.subheader(f"{CHART_AIRPORT} Top 10 sân bay nhộn nhịp nhất")
+        st.caption(
+            "Mỗi chuyến được tính **hai lần**: một lần tại sân bay khởi hành và một lần tại sân bay hạ cánh "
+            "(tổng lượt toàn mạng xấp xỉ gấp đôi số chuyến sau bộ lọc)."
+        )
+        df_top10_ap = query(f"""
+            WITH leg AS (
+                SELECT ap_o.airport_iata AS airport_iata,
+                       COALESCE(ap_o.city, ap_o.airport_iata) AS city,
+                       COUNT(*) AS n
+                {BASE_JOIN}
+                WHERE {f.where()}
+                GROUP BY ap_o.airport_iata, ap_o.city
+                UNION ALL
+                SELECT ap_d.airport_iata AS airport_iata,
+                       COALESCE(ap_d.city, ap_d.airport_iata) AS city,
+                       COUNT(*) AS n
+                {BASE_JOIN}
+                WHERE {f.where()}
+                GROUP BY ap_d.airport_iata, ap_d.city
+            )
+            SELECT airport_iata, city, SUM(n) AS total_flights
+            FROM leg
+            GROUP BY airport_iata, city
+            ORDER BY total_flights DESC
+            LIMIT 10
+        """)
+        if not df_top10_ap.empty:
+            df_plot = df_top10_ap.sort_values("total_flights", ascending=True).copy()
+            df_plot["label"] = df_plot["airport_iata"] + " — " + df_plot["city"]
+            fig5 = px.bar(
+                df_plot,
+                x="total_flights",
+                y="label",
+                orientation="h",
+                color="total_flights",
+                color_continuous_scale="Blues",
+                labels={"total_flights": "Số lượt", "label": ""},
+            )
+            fig5.update_traces(texttemplate="%{x:,}", textposition="outside", cliponaxis=False)
+            fig5.update_layout(
+                height=400,
+                margin=dict(t=10, b=10, l=12, r=48),
+                coloraxis_showscale=False,
+            )
+            st.plotly_chart(fig5, width="stretch")
+        else:
+            st.info("Chưa có dữ liệu — hãy chạy pipeline.py trước")
+
+    with col_top_delay:
+        st.subheader(f"{CHART_AIRPORT} Top 10 sân bay tổng delay cao nhất")
+        st.caption(
+            "Chỉ chuyến **không hủy**. Cộng phút trễ **dương** tại điểm đi "
+            "(`departure_delay`) và tại điểm đến (`arrival_delay`); "
+            "mỗi chuyến góp tối đa hai thành phần (khớp cách gán delay theo sân bay)."
+        )
+        df_top10_delay = query(f"""
+            WITH leg AS (
+                SELECT ap_o.airport_iata AS airport_iata,
+                       COALESCE(ap_o.city, ap_o.airport_iata) AS city,
+                       SUM(CASE WHEN f.departure_delay > 0 THEN f.departure_delay ELSE 0 END) AS delay_min
+                {BASE_JOIN}
+                WHERE {f.where("f.is_cancelled=0")}
+                GROUP BY ap_o.airport_iata, ap_o.city
+                UNION ALL
+                SELECT ap_d.airport_iata AS airport_iata,
+                       COALESCE(ap_d.city, ap_d.airport_iata) AS city,
+                       SUM(CASE WHEN f.arrival_delay > 0 THEN f.arrival_delay ELSE 0 END) AS delay_min
+                {BASE_JOIN}
+                WHERE {f.where("f.is_cancelled=0")}
+                GROUP BY ap_d.airport_iata, ap_d.city
+            )
+            SELECT airport_iata, city, SUM(delay_min) AS total_delay_min
+            FROM leg
+            GROUP BY airport_iata, city
+            ORDER BY total_delay_min DESC
+            LIMIT 10
+        """)
+        if not df_top10_delay.empty:
+            df_dplot = df_top10_delay.sort_values("total_delay_min", ascending=True).copy()
+            df_dplot["label"] = df_dplot["airport_iata"] + " — " + df_dplot["city"]
+            fig6 = px.bar(
+                df_dplot,
+                x="total_delay_min",
+                y="label",
+                orientation="h",
+                color="total_delay_min",
+                color_continuous_scale="OrRd",
+                labels={"total_delay_min": "Tổng phút trễ (>0)", "label": ""},
+            )
+            fig6.update_traces(texttemplate="%{x:,.0f}", textposition="outside", cliponaxis=False)
+            fig6.update_layout(
+                height=400,
+                margin=dict(t=10, b=10, l=12, r=52),
+                coloraxis_showscale=False,
+            )
+            st.plotly_chart(fig6, width="stretch")
+        else:
+            st.info("Chưa có dữ liệu — hãy chạy pipeline.py trước")

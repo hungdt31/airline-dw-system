@@ -13,28 +13,27 @@
 từng mục tiêu với kết quả đạt được:
 
 \begin{enumerate}
-    \item \textbf{Data Warehouse chuẩn hóa.}
+    \item \textbf{Data Warehouse chuẩn hóa:}
     Kho dữ liệu SQLite theo Star Schema đã được xây dựng hoàn chỉnh:
-    1 bảng sự kiện (\texttt{fact\_flights}, $\approx$5{,}3M bản ghi),
+    1 bảng sự kiện (\texttt{fact\_flights}, $\sim$5{,}6M bản ghi),
     4 bảng chiều và 6 chỉ mục OLAP.
     ETL pipeline streaming kết hợp tối ưu dtype (\texttt{float32}/\texttt{int8})
     giữ RAM ổn định $\approx$120\,MB/chunk, hoàn thành trong 3--8 phút ---
     chứng minh kiến trúc phân lô hoạt động hiệu quả trên máy cá nhân.
 
-    \item \textbf{Dashboard OLAP đa chiều.}
+    \item \textbf{Dashboard OLAP đa chiều:}
     Dashboard Streamlit 6 trang (Tổng quan, Tuyến đường, Thời gian,
     Nguyên nhân, Dự báo, Explorer) kết hợp Plotly,
     hiện thực đầy đủ các phép OLAP (Slice, Dice, Roll-up, Drill-down)
     thông qua bộ lọc tương tác theo tháng/quý, hãng và địa lý.
     Mỗi trang tập trung một góc nhìn phân tích riêng,
-    giúp người dùng khám phá dữ liệu một cách có hệ thống.
+    giúp người dùng khám phá dữ liệu một cách có hệ thống, đặc biệt hiểu rõ các khía cạnh biến động của hiện tượng chậm chuyến.
 
-    \item \textbf{Mô hình dự báo delay.}
-    Framework so sánh 5 thuật toán (Logistic Regression, Random Forest,
+    \item \textbf{Mô hình dự báo delay:}
+    Xây dựng quy trình so sánh 5 thuật toán (Logistic Regression, Random Forest,
     Neural Network, XGBoost, LightGBM) trên cùng tập dữ liệu và 7 chỉ số.
-    Mô hình tốt nhất (XGBoost) đạt AUC-ROC $\approx$ 0{,}75 ---
-    vượt đáng kể so với baseline ngẫu nhiên (0{,}5) --- với bộ feature
-    hoàn toàn ``dự báo''.
+    Mô hình tốt nhất (XGBoost) đạt AUC-ROC $\approx$ 0{,}76 --- với bộ feature
+    được chọn theo phương pháp \textit{feature selection} và \textit{feature engineering}.
 \end{enumerate}
 
 % ------------------------------------------------------------
@@ -51,7 +50,7 @@ cho các bên liên quan:
           một chuyến delay buổi sáng có thể lan sang 3--5 chuyến tiếp theo.
           \textit{Khuyến nghị cho hãng:} tăng buffer thời gian quay đầu tàu bay
           (\textit{turnaround time}) cho các chuyến nối tiếp,
-          đặc biệt tại sân bay hub.
+          đặc biệt tại sân bay trung chuyển lớn.
 
     \item \textbf{Mùa hè (tháng 6--7) và mùa đông (tháng 12--1) là hai đỉnh delay.}
           Trùng với mùa bão và mùa tuyết --- hai giai đoạn mà tỷ lệ trễ
@@ -65,11 +64,11 @@ cho các bên liên quan:
           \textit{Khuyến nghị cho hành khách:} ưu tiên chuyến sáng sớm
           nếu cần đảm bảo đúng giờ cho kết nối quan trọng.
 
-    \item \textbf{Hãng bay ảnh hưởng có hệ thống đến đúng giờ.}
-          Chênh lệch OTP giữa hãng tốt nhất và kém nhất lên đến 15--20 điểm phần trăm,
-          phản ánh khác biệt trong chiến lược quay đầu, bảo trì và xếp lịch.
-          \textit{Khuyến nghị cho ngành:} benchmark OTP công khai
-          tạo áp lực cải thiện từ phía hãng có tỷ lệ trễ cao.
+    \item \textbf{Sân bay là “nút thắt” vật lý của mạng lưới hàng không}
+          --- nơi mật độ không phận và năng lực hạ tầng (như đường băng, cổng, điều phối) ảnh hưởng trực tiếp đến hiệu suất, 
+          thậm chí quan trọng hơn cả số lượng chuyến bay. Sự khác biệt giữa việc vận hành hiệu quả tại Atlanta (ATL) và tình trạng quá tải ở Chicago (ORD) cho thấy vai trò then chốt của hệ thống điều phối không lưu (NAS) 
+          — nguyên nhân gây ra gần 50\% các trường hợp chậm chuyến. Vì vậy, để tối ưu toàn hệ thống, cần xây dựng cơ chế so sánh minh bạch về năng lực giải tỏa của từng sân bay và áp dụng điều phối slot theo thời gian thực, 
+          qua đó chủ động cắt đứt chuỗi trễ dây chuyền.
 
     \item \textbf{Quãng đường và thời gian bay là feature quan trọng nhất trong mô hình.}
           Chuyến bay dài chịu nhiều rủi ro hơn (thời tiết, không phận, tiêu thụ nhiên liệu).
@@ -83,20 +82,20 @@ cho các bên liên quan:
 \begin{enumerate}
     \item \textbf{Dữ liệu chỉ bao phủ năm 2015.}
     Insight và mô hình phản ánh thực trạng một năm cụ thể.
-    Sự thay đổi về cơ sở hạ tầng, quy định FAA,
+    Sự thay đổi về cơ sở hạ tầng, quy định của Cục Hàng không Liên bang Hoa Kỳ (FAA),
     và hành vi di chuyển sau đại dịch COVID-19
     có thể làm mô hình không còn phù hợp với thực tế hiện tại.
-    Tuy nhiên, \textit{phương pháp luận} (kiến trúc DW, pipeline so sánh mô hình)
+    Tuy nhiên, \textit{phương pháp luận} (kiến trúc Data Warehouse, pipeline so sánh mô hình)
     vẫn áp dụng được khi thay đổi nguồn dữ liệu.
 
     \item \textbf{SQLite không phù hợp cho production.}
     SQLite là single-writer, không hỗ trợ concurrent access
     và không có cơ chế phân tán.
     Một số OLAP query phức tạp mất vài giây ---
-    chấp nhận được cho đồ án nhưng không đủ cho hệ thống thực
+    chấp nhận được cho bài tập lớn nhưng không đủ cho hệ thống thực
     phục vụ nhiều người dùng đồng thời.
 
-    \item \textbf{AUC-ROC $\approx$ 0{,}75 --- còn khoảng cách so với mô hình lý tưởng.}
+    \item \textbf{AUC-ROC $\sim$ 0{,}76 --- còn khoảng cách so với mô hình lý tưởng.}
     Mô hình chủ động \textbf{không dùng \texttt{departure\_delay}}
     để đảm bảo tính dự báo (trước khi cất cánh).
     Đổi lại, AUC bị giới hạn vì thiếu dữ liệu thời tiết thực tế,

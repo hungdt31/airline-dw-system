@@ -29,9 +29,10 @@
   \node[csv] (csv_fl) {\textbf{flights.csv}};
   \node[csv, right=4mm of csv_fl] (csv_al) {\textbf{airlines.csv}};
   \node[csv, right=4mm of csv_al] (csv_ap) {\textbf{airports.csv}};
+  \node[csv, right=4mm of csv_ap] (csv_airport_id) {\textbf{L\_AIRPORT\_ID.xls}};
   
   % --- Khung bao + nhãn bên trong ---
-  \node[srcbox, fit=(csv_fl)(csv_al)(csv_ap),
+  \node[srcbox, fit=(csv_fl)(csv_al)(csv_ap)(csv_airport_id),
         label={[font=\scriptsize\itshape, text=black!60]above:Nguồn dữ liệu thô (Kaggle 2015)}
   ] (srcframe) {};
   
@@ -46,8 +47,9 @@
   
   % --- Ba mũi tên hội tụ vào etl.north ---
   \draw[arr] (csv_fl.south) -- +(0,-3mm) -| (etl.north);
-  \draw[arr] (csv_al.south) -- (etl.north);
+  \draw[arr] (csv_al.south) -- +(0,-3mm) -| (etl.north);
   \draw[arr] (csv_ap.south) -- +(0,-3mm) -| (etl.north);
+  \draw[arr] (csv_airport_id.south) -- +(0,-3mm) -| (etl.north);
   
   % --- Data Warehouse ---
   \node[layer, below=5mm of etl] (dw) {%

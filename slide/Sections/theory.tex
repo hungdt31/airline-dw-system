@@ -34,7 +34,7 @@
     font=\scriptsize, rounded corners=2pt},
   arr/.style={-{Latex[length=1.5mm]}, thick, BKTemplate!60}
 ]
-\node[fact] (f) {fact\_flights\\{\scriptsize 5,3M dòng}};
+\node[fact] (f) {fact\_flights\\{\scriptsize 5,6M dòng}};
 \node[dim, above left=8mm and -3mm of f]  (d1) {dim\_airline};
 \node[dim, above right=8mm and -3mm of f] (d2) {dim\_airport};
 \node[dim, below left=8mm and -3mm of f]  (d3) {dim\_date};
@@ -86,7 +86,7 @@
 \begin{column}{0.5\textwidth}
 \textbf{1. Data Cleaning}
 \begin{itemize}
-  \item \textbf{Missing}: $\sim$76\% delay thành phần thiếu $\to$ \texttt{fillna(0)}.
+  \item \textbf{Missing}: Thành phần delay thiếu $\to$ \texttt{fillna(0)}.
   \item \textbf{Outliers}: delay âm = đến sớm (bình thường); delay cực lớn = thật.
   \item Nhãn nhị phân ``trung hòa'' giá trị cực đoan.
 \end{itemize}
@@ -120,17 +120,21 @@
 \small
 \begin{table}
 \centering
-\scriptsize
-\begin{tabular}{clll}
-\toprule
+\slideTablePad
+\begin{tabular}{|c|l|l|p{5cm}|}
+\hline
 \textbf{\#} & \textbf{Thuật toán} & \textbf{Trường phái} & \textbf{Đặc điểm chính} \\
-\midrule
+\hline
 1 & Logistic Regression & Tuyến tính & Nhanh, giải thích được, baseline \\
+\hline
 2 & Random Forest & Bagging & $T$ cây song song, robust, feature importance \\
-3 & Neural Network (MLP) & Deep Learning & Nhiều lớp ẩn phi tuyến, ReLU + Adam \\
+\hline
+3 & Neural Network & Deep Learning & Nhiều lớp ẩn phi tuyến, ReLU + Adam \\
+\hline
 4 & XGBoost & Boosting & Cây tuần tự sửa residual, regularization L1/L2 \\
+\hline
 5 & LightGBM & Boosting & Leaf-wise + histogram splitting, nhanh hơn XGBoost \\
-\bottomrule
+\hline
 \end{tabular}
 \end{table}
 
@@ -146,28 +150,35 @@
 
 % --- Slide 9 ---
 \begin{frame}{Chỉ số đánh giá}
-Với dữ liệu mất cân bằng (81\% / 19\%), chỉ số đánh giá rất quan trọng:
+Với dữ liệu mất cân bằng (tỉ lệ delay/ đúng giờ) trong lĩnh vực hàng không, chỉ số đánh giá rất quan trọng:
 
 \vspace{2mm}
 \small
 \begin{table}
 \centering
-\begin{tabular}{lp{7.8cm}}
-\toprule
+\slideTablePad
+\begin{tabular}{|l|p{7.5cm}|}
+\hline
 \textbf{Chỉ số} & \textbf{Ý nghĩa} \\
-\midrule
+\hline
 \textbf{AUC-ROC} & Khả năng phân biệt 2 lớp ở mọi ngưỡng (chỉ số \textbf{chính}) \\
+\hline
 Accuracy & Tỷ lệ đúng tổng thể --- \textcolor{red}{gây hiểu nhầm khi lệch lớp} \\
+\hline
 F1-score & Trung bình hài hòa Precision--Recall \\
+\hline
 Avg. Precision & Diện tích dưới Precision-Recall --- nhạy hơn AUC khi lớp dương nhỏ \\
+\hline
 Log Loss & Chất lượng xác suất dự đoán (thấp hơn = tốt hơn) \\
+\hline
 Brier Score & Bình phương sai lệch xác suất--nhãn (thấp hơn = tốt hơn) \\
+\hline
 TG huấn luyện & Chi phí tính toán thực tế \\
-\bottomrule
+\hline
 \end{tabular}
 \end{table}
 
-\vspace{2mm}
-Mô hình luôn đoán ``đúng giờ'' đạt Accuracy $\approx$81\% nhưng AUC = 0,50
-$\to$ \textbf{Accuracy đơn thuần gây hiểu nhầm}.
+% \vspace{2mm}
+% Mô hình luôn đoán ``đúng giờ'' đạt Accuracy $\approx$81\% nhưng AUC = 0,50
+% $\to$ \textbf{Accuracy đơn thuần gây hiểu nhầm}.
 \end{frame}

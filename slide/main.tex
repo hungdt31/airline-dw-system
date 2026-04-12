@@ -24,9 +24,15 @@
 \usepackage{pifont}
 \usepackage{xcolor}
 \usepackage{tikz}
-\usetikzlibrary{positioning, arrows.meta}
+\usetikzlibrary{positioning, arrows.meta, calc}
 
-\graphicspath{{images/}{images/dashboard/}{../report/img/}{../report/img/dashboard/}}
+\graphicspath{{images/}{images/dashboard/}{images/analysis/}{../report/img/}{../report/img/dashboard/}{../report/img/analysis/}}
+
+% Khoảng cách ô thống nhất cho bảng kiểu ``khung kín'' (|...| + \hline)
+\newcommand{\slideTablePad}{%
+  \setlength{\tabcolsep}{7pt}%
+  \renewcommand{\arraystretch}{1.25}%
+}
 
 %------------------------------------------------------------
 % Title page configuration
@@ -37,7 +43,7 @@
 \subtitle{\textbf{\Large XÂY DỰNG KHO DỮ LIỆU VÀ KHAI PHÁ DỮ LIỆU\\CHO LĨNH VỰC HÀNG KHÔNG}}
 
 \author[Nhóm 2211322-2211337-2210429]
-{\textbf{GVHD:} ThS. Đỗ Thanh Thái\\
+{\textbf{GVHD:} Thầy Đỗ Thanh Thái\\
 \vspace{0.2cm}
 \textbf{SVTH:} Đoàn Trí Hùng (2211322); Nguyễn Mạnh Hùng (2211337);\\
 Nguyễn Cao Cường (2210429)}
@@ -83,16 +89,20 @@ Nguyễn Cao Cường (2210429)}
 \frametitle{PHÂN CHIA CÔNG VIỆC}
 \begin{itemize}
     \item \textbf{Đoàn Trí Hùng (2211322):}
-    Xây dựng pipeline ETL, thiết kế Star Schema (kho dữ liệu SQLite),
-    phát triển dashboard Streamlit 6 trang, viết báo cáo và slide. (100\%)
+    Xây dựng pipeline ETL, thiết kế Star Schema (SQLite),
+    phát triển Dashboard Streamlit 6 trang,
+    viết báo cáo. (100\%)
 
     \item \textbf{Nguyễn Mạnh Hùng (2211337):}
-    Huấn luyện và so sánh 5 mô hình ML (Logistic Regression, Random Forest,
-    Neural Network, XGBoost, LightGBM), phân tích kết quả, Feature Importance. (100\%)
+    Huấn luyện và so sánh 5 mô hình ML
+    (Logistic Regression, Random Forest, Neural Network,
+    XGBoost, LightGBM),
+    phân tích kết quả, Feature Importance. (100\%)
 
     \item \textbf{Nguyễn Cao Cường (2210429):}
-    Khảo sát dữ liệu nguồn (EDA), xây dựng bộ truy vấn OLAP,
-    tổng hợp tài liệu tham khảo, thuyết trình. (100\%)
+    Khảo sát dữ liệu nguồn,
+    xây dựng bộ truy vấn OLAP,
+    tổng hợp tài liệu tham khảo, làm slide thuyết trình. (100\%)
 \end{itemize}
 \end{frame}
 

@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+    <html lang="vi">
+    <head>
+      <meta charset="UTF-8">
+      <title>EDA Trước ETL — Airline DW</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 30px; background: #f9f9f9; color: #222; }
+        h1   { color: #1e3a5f; }
+        h2   { color: #1e3a5f; border-bottom: 2px solid #1e3a5f; padding-bottom: 4px; margin-top: 40px; }
+        h3   { color: #2c6e9f; }
+        .tbl { border-collapse: collapse; width: 100%; margin-bottom: 16px; font-size: 13px; }
+        .tbl th { background: #1e3a5f; color: white; padding: 6px 10px; text-align: left; }
+        .tbl td { border: 1px solid #ddd; padding: 5px 10px; }
+        .tbl tr:nth-child(even) { background: #eef2f7; }
+        .img-box { display: inline-block; margin: 8px; }
+        img { max-width: 700px; border: 1px solid #ccc; border-radius: 4px; }
+        .kpi { display: inline-block; background: #1e3a5f; color: white;
+                padding: 10px 24px; border-radius: 6px; margin: 6px;
+                font-size: 15px; font-weight: bold; }
+        .note { background: #fffde7; border-left: 4px solid #f9a825;
+                 padding: 10px 14px; margin: 12px 0; font-size: 13px; }
+      </style>
+    </head>
+    <body>
+    <h1>EDA Trước ETL — Airline DW (US Flights 2015)</h1>
+    <div>
+      <span class="kpi">Tổng dòng phân tích: 5,819,079</span>
+      <span class="kpi">Tổng cột: 25</span>
+      <span class="kpi">Cột có missing: 12</span>
+    </div>
+
+    <h2>1. Tỷ lệ Missing Từng Cột</h2>
+    <div class="note">
+      Cột delay thành phần (AIR_SYSTEM, WEATHER…) có ~76% missing — hiện tượng đặc thù:
+      chỉ ghi nhận khi chuyến thật sự delay. ETL quy ước fillna(0).
+    </div>
+    <div class="img-box">
+      <img src="figures/eda_missing_bar.png" alt="Missing bar">
+    </div>
+    <table class="dataframe tbl">
+  <thead>
+    <tr style="text-align: right;">
+      <th>column</th>
+      <th>dtype</th>
+      <th>n_missing</th>
+      <th>pct_missing</th>
+      <th>etl_action</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>CANCELLATION_REASON</td>
+      <td>object</td>
+      <td>5729195</td>
+      <td>98.4600</td>
+      <td>CÂN NHẮC DROP cột — quá nhiều missing</td>
+    </tr>
+    <tr>
+      <td>WEATHER_DELAY</td>
+      <td>float64</td>
+      <td>4755640</td>
+      <td>81.7200</td>
+      <td>fillna(0) — NaN delay = không có trễ loại này</td>
+    </tr>
+    <tr>
+      <td>LATE_AIRCRAFT_DELAY</td>
+      <td>float64</td>
+      <td>4755640</td>
+      <td>81.7200</td>
+      <td>fillna(0) — NaN delay = không có trễ loại này</td>
+    </tr>
+    <tr>
+      <td>AIRLINE_DELAY</td>
+      <td>float64</td>
+      <td>4755640</td>
+      <td>81.7200</td>
+      <td>fillna(0) — NaN delay = không có trễ loại này</td>
+    </tr>
+    <tr>
+      <td>SECURITY_DELAY</td>
+      <td>float64</td>
+      <td>4755640</td>
+      <td>81.7200</td>
+      <td>fillna(0) — NaN delay = không có trễ loại này</td>
+    </tr>
+    <tr>
+      <td>AIR_SYSTEM_DELAY</td>
+      <td>float64</td>
+      <td>4755640</td>
+      <td>81.7200</td>
+      <td>fillna(0) — NaN delay = không có trễ loại này</td>
+    </tr>
+    <tr>
+      <td>ELAPSED_TIME</td>
+      <td>float64</td>
+      <td>105071</td>
+      <td>1.8100</td>
+      <td>fillna / dropna — tỷ lệ thấp</td>
+    </tr>
+    <tr>
+      <td>ARRIVAL_DELAY</td>
+      <td>float64</td>
+      <td>105071</td>
+      <td>1.8100</td>
+      <td>fillna(0) — NaN delay = không có trễ loại này</td>
+    </tr>
+    <tr>
+      <td>AIR_TIME</td>
+      <td>float64</td>
+      <td>105071</td>
+      <td>1.8100</td>
+      <td>fillna / dropna — tỷ lệ thấp</td>
+    </tr>
+    <tr>
+      <td>ARRIVAL_TIME</td>
+      <td>float64</td>
+      <td>92513</td>
+      <td>1.5900</td>
+      <td>fillna / dropna — tỷ lệ thấp</td>
+    </tr>
+    <tr>
+      <td>DEPARTURE_TIME</td>
+      <td>float64</td>
+      <td>86153</td>
+      <td>1.4800</td>
+      <td>fillna / dropna — tỷ lệ thấp</td>
+    </tr>
+    <tr>
+      <td>DEPARTURE_DELAY</td>
+      <td>float64</td>
+      <td>86153</td>
+      <td>1.4800</td>
+      <td>fillna(0) — NaN delay = không có trễ loại này</td>
+    </tr>
+    <tr>
+      <td>SCHEDULED_DEPARTURE</td>
+      <td>int64</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>OK — không cần xử lý</td>
+    </tr>
+    <tr>
+      <td>MONTH</td>
+      <td>int64</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>OK — không cần xử lý</td>
+    </tr>
+    <tr>
+      <td>DISTANCE</td>
+      <td>int64</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>OK — không cần xử lý</td>
+    </tr>
+    <tr>
+      <td>SCHEDULED_ARRIVAL</td>
+      <td>int64</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>OK — không cần xử lý</td>
+    </tr>
+    <tr>
+      <td>DESTINATION_AIRPORT</td>
+      <td>object</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>OK — không cần xử lý</td>
+    </tr>
+    <tr>
+      <td>DIVERTED</td>
+      <td>int64</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>OK — không cần xử lý</td>
+    </tr>
+    <tr>
+      <td>CANCELLED</td>
+      <td>int64</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>OK — không cần xử lý</td>
+    </tr>
+    <tr>
+      <td>ORIGIN_AIRPORT</td>
+      <td>object</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>OK — không cần xử lý</td>
+    </tr>
+    <tr>
+      <td>FLIGHT_NUMBER</td>
+      <td>int64</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>OK — không cần xử lý</td>
+    </tr>
+    <tr>
+      <td>AIRLINE</td>
+      <td>object</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>OK — không cần xử lý</td>
+    </tr>
+    <tr>
+      <td>DAY_OF_WEEK</td>
+      <td>int64</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>OK — không cần xử lý</td>
+    </tr>
+    <tr>
+      <td>DAY</td>
+      <td>int64</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>OK — không cần xử lý</td>
+    </tr>
+    <tr>
+      <td>YEAR</td>
+      <td>int64</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>OK — không cần xử lý</td>
+    </tr>
+  </tbody>
+</table>
+
+    <h2>2. Thống Kê Mô Tả và Outlier Cột Số</h2>
+    <div class="note">
+      Delay âm = chuyến đến sớm hơn lịch (bình thường, GIỮ nguyên).
+      Delay >1000 phút = hoãn qua ngày (hiếm nhưng thật, GIỮ; nhãn nhị phân trung hoà).
+    </div>
+    <div class="img-box"><img src="figures/eda_delay_dist.png" alt="Delay dist"></div>
+    <div class="img-box"><img src="figures/eda_distance_dist.png" alt="Distance dist"></div>
+    <div class="img-box"><img src="figures/eda_dep_hour_dist.png" alt="Dep hour dist"></div>
+    <table class="dataframe tbl">
+  <thead>
+    <tr style="text-align: right;">
+      <th>column</th>
+      <th>n_valid</th>
+      <th>mean</th>
+      <th>std</th>
+      <th>min</th>
+      <th>p25</th>
+      <th>median</th>
+      <th>p75</th>
+      <th>max</th>
+      <th>n_negative</th>
+      <th>pct_negative</th>
+      <th>n_gt1000min</th>
+      <th>pct_gt1000min</th>
+      <th>n_iqr_outlier</th>
+      <th>pct_iqr_out</th>
+      <th>etl_decision</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>DEPARTURE_DELAY</td>
+      <td>5732926</td>
+      <td>9.3700</td>
+      <td>37.0800</td>
+      <td>-82.0000</td>
+      <td>-5.0000</td>
+      <td>-2.0000</td>
+      <td>7.0000</td>
+      <td>1,988.0000</td>
+      <td>3277948</td>
+      <td>57.1800</td>
+      <td>271</td>
+      <td>0.0000</td>
+      <td>736242</td>
+      <td>12.8400</td>
+      <td>fillna(0); giữ âm (đến sớm); giữ &gt;1000 (thật); nhãn nhị phân trung hoà</td>
+    </tr>
+    <tr>
+      <td>ARRIVAL_DELAY</td>
+      <td>5714008</td>
+      <td>4.4100</td>
+      <td>39.2700</td>
+      <td>-87.0000</td>
+      <td>-13.0000</td>
+      <td>-5.0000</td>
+      <td>8.0000</td>
+      <td>1,971.0000</td>
+      <td>3500899</td>
+      <td>61.2700</td>
+      <td>266</td>
+      <td>0.0000</td>
+      <td>512002</td>
+      <td>8.9600</td>
+      <td>fillna(0); giữ âm (đến sớm); giữ &gt;1000 (thật); nhãn nhị phân trung hoà</td>
+    </tr>
+    <tr>
+      <td>ELAPSED_TIME</td>
+      <td>5714008</td>
+      <td>137.0100</td>
+      <td>74.2100</td>
+      <td>14.0000</td>
+      <td>82.0000</td>
+      <td>118.0000</td>
+      <td>168.0000</td>
+      <td>766.0000</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>291084</td>
+      <td>5.0900</td>
+      <td>fillna(median); loại &lt;0 nếu có</td>
+    </tr>
+    <tr>
+      <td>AIR_TIME</td>
+      <td>5714008</td>
+      <td>113.5100</td>
+      <td>72.2300</td>
+      <td>7.0000</td>
+      <td>60.0000</td>
+      <td>94.0000</td>
+      <td>144.0000</td>
+      <td>690.0000</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>296342</td>
+      <td>5.1900</td>
+      <td>kiểm tra thêm nếu cần</td>
+    </tr>
+    <tr>
+      <td>DISTANCE</td>
+      <td>5819079</td>
+      <td>822.3600</td>
+      <td>607.7800</td>
+      <td>21.0000</td>
+      <td>373.0000</td>
+      <td>647.0000</td>
+      <td>1,062.0000</td>
+      <td>4,983.0000</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>349511</td>
+      <td>6.0100</td>
+      <td>giữ nguyên; outlier xa theo IQR là chuyến dài thật</td>
+    </tr>
+    <tr>
+      <td>SCHEDULED_DEPARTURE</td>
+      <td>5819079</td>
+      <td>1,329.6000</td>
+      <td>483.7500</td>
+      <td>1.0000</td>
+      <td>917.0000</td>
+      <td>1,325.0000</td>
+      <td>1,730.0000</td>
+      <td>2,359.0000</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>kiểm tra thêm nếu cần</td>
+    </tr>
+    <tr>
+      <td>DEPARTURE_TIME</td>
+      <td>5732926</td>
+      <td>1,335.2000</td>
+      <td>496.4200</td>
+      <td>1.0000</td>
+      <td>921.0000</td>
+      <td>1,330.0000</td>
+      <td>1,740.0000</td>
+      <td>2,400.0000</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>kiểm tra thêm nếu cần</td>
+    </tr>
+    <tr>
+      <td>AIR_SYSTEM_DELAY</td>
+      <td>1063439</td>
+      <td>13.4800</td>
+      <td>28.0000</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>2.0000</td>
+      <td>18.0000</td>
+      <td>1,134.0000</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>3</td>
+      <td>0.0000</td>
+      <td>73597</td>
+      <td>6.9200</td>
+      <td>fillna(0); giữ âm (đến sớm); giữ &gt;1000 (thật); nhãn nhị phân trung hoà</td>
+    </tr>
+    <tr>
+      <td>SECURITY_DELAY</td>
+      <td>1063439</td>
+      <td>0.0800</td>
+      <td>2.1400</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>573.0000</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>3484</td>
+      <td>0.3300</td>
+      <td>fillna(0); giữ âm (đến sớm); giữ &gt;1000 (thật); nhãn nhị phân trung hoà</td>
+    </tr>
+    <tr>
+      <td>AIRLINE_DELAY</td>
+      <td>1063439</td>
+      <td>18.9700</td>
+      <td>48.1600</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>2.0000</td>
+      <td>19.0000</td>
+      <td>1,971.0000</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>179</td>
+      <td>0.0200</td>
+      <td>112616</td>
+      <td>10.5900</td>
+      <td>fillna(0); giữ âm (đến sớm); giữ &gt;1000 (thật); nhãn nhị phân trung hoà</td>
+    </tr>
+    <tr>
+      <td>LATE_AIRCRAFT_DELAY</td>
+      <td>1063439</td>
+      <td>23.4700</td>
+      <td>43.2000</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>3.0000</td>
+      <td>29.0000</td>
+      <td>1,331.0000</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>14</td>
+      <td>0.0000</td>
+      <td>100733</td>
+      <td>9.4700</td>
+      <td>fillna(0); giữ âm (đến sớm); giữ &gt;1000 (thật); nhãn nhị phân trung hoà</td>
+    </tr>
+    <tr>
+      <td>WEATHER_DELAY</td>
+      <td>1063439</td>
+      <td>2.9200</td>
+      <td>20.4300</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>1,211.0000</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>11</td>
+      <td>0.0000</td>
+      <td>64716</td>
+      <td>6.0900</td>
+      <td>fillna(0); giữ âm (đến sớm); giữ &gt;1000 (thật); nhãn nhị phân trung hoà</td>
+    </tr>
+  </tbody>
+</table>
+
+    <h2>3. Cột Categorical — Cardinality và Giá Trị Phổ Biến</h2>
+    <table class="dataframe tbl">
+  <thead>
+    <tr style="text-align: right;">
+      <th>column</th>
+      <th>n_unique</th>
+      <th>n_null</th>
+      <th>pct_null</th>
+      <th>top5_values</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>AIRLINE</td>
+      <td>14</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>WN(1,261,855), DL(875,881), AA(725,984), OO(588,353), EV(571,977)</td>
+    </tr>
+    <tr>
+      <td>ORIGIN_AIRPORT</td>
+      <td>628</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>ATL(346,836), ORD(285,884), DFW(239,551), DEN(196,055), LAX(194,673)</td>
+    </tr>
+    <tr>
+      <td>DESTINATION_AIRPORT</td>
+      <td>629</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>ATL(346,904), ORD(285,906), DFW(239,582), DEN(196,010), LAX(194,696)</td>
+    </tr>
+    <tr>
+      <td>CANCELLATION_REASON</td>
+      <td>4</td>
+      <td>5729195</td>
+      <td>98.4600</td>
+      <td>B(48,851), A(25,262), C(15,749), D(22)</td>
+    </tr>
+    <tr>
+      <td>MONTH</td>
+      <td>12</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>7(520,718), 8(510,536), 3(504,312), 6(503,897), 5(496,993)</td>
+    </tr>
+    <tr>
+      <td>DAY_OF_WEEK</td>
+      <td>7</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>4(872,521), 1(865,543), 5(862,209), 3(855,897), 2(844,600)</td>
+    </tr>
+  </tbody>
+</table>
+
+    <h2>4. Chất Lượng JOIN (flights ↔ airlines / airports)</h2>
+    <div class="note">
+      Hàng không map được FK → sẽ bị dropna trong ETL transform_chunk.
+      Tỷ lệ mất &lt;1% là chấp nhận được.
+    </div>
+    <table class="dataframe tbl">
+  <thead>
+    <tr style="text-align: right;">
+      <th>check</th>
+      <th>n_rows_checked</th>
+      <th>n_matched</th>
+      <th>n_unmatched</th>
+      <th>pct_lost_in_etl</th>
+      <th>top_unmatched</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>flights.AIRLINE → dim_airline</td>
+      <td>5819079</td>
+      <td>5819079</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>flights.ORIGIN_AIRPORT → dim_airport</td>
+      <td>5819079</td>
+      <td>5332914</td>
+      <td>486165</td>
+      <td>8.3550</td>
+      <td>10397(5632), 13930(4902), 11298(3854), 11292(3167), 12892(3112)</td>
+    </tr>
+    <tr>
+      <td>flights.DEST_AIRPORT → dim_airport</td>
+      <td>5819079</td>
+      <td>5332914</td>
+      <td>486165</td>
+      <td>8.3550</td>
+      <td>10397(5652), 13930(4910), 11298(3801), 12892(3131), 11292(3130)</td>
+    </tr>
+  </tbody>
+</table>
+
+    <h2>5. Phân Tích Chuyến Hủy / Chuyển Hướng</h2>
+    <ul>
+    <li><b>CANCELLED</b>: {'count': 89884, 'pct': 1.54}</li><li><b>DIVERTED</b>: {'count': 15187, 'pct': 0.26}</li><li><b>CANCELLATION_REASON</b>: {'B': 48851, 'A': 25262, 'C': 15749, 'D': 22}</li>
+    </ul>
+
+    <h2>6. Tổng Hợp Quyết Định ETL</h2>
+    <div class="note">
+      Dựa trên kết quả EDA — các quyết định đã được hiện thực trong
+      <code>etl/transform.py</code> và <code>etl/extract.py</code>.
+    </div>
+    <ul><li style="margin:4px 0; color:#d62728">⚠  Cột 'CANCELLATION_REASON': 98.5% missing — ETL: CÂN NHẮC DROP cột — quá nhiều missing</li>
+<li style="margin:4px 0; color:#d62728">⚠  Cột 'WEATHER_DELAY': 81.7% missing — ETL: fillna(0) — NaN delay = không có trễ loại này</li>
+<li style="margin:4px 0; color:#d62728">⚠  Cột 'LATE_AIRCRAFT_DELAY': 81.7% missing — ETL: fillna(0) — NaN delay = không có trễ loại này</li>
+<li style="margin:4px 0; color:#d62728">⚠  Cột 'AIRLINE_DELAY': 81.7% missing — ETL: fillna(0) — NaN delay = không có trễ loại này</li>
+<li style="margin:4px 0; color:#d62728">⚠  Cột 'SECURITY_DELAY': 81.7% missing — ETL: fillna(0) — NaN delay = không có trễ loại này</li>
+<li style="margin:4px 0; color:#d62728">⚠  Cột 'AIR_SYSTEM_DELAY': 81.7% missing — ETL: fillna(0) — NaN delay = không có trễ loại này</li>
+<li style="margin:4px 0; color:#2ca02c">✔  Cột delay thành phần: missing trung bình 58.8% → ETL dùng fillna(0) (NaN = không có trễ loại đó)</li>
+<li style="margin:4px 0; color:#2ca02c">✔  DEPARTURE_DELAY âm: 57.2% → GIỮ (đến sớm hơn lịch là hợp lệ)</li>
+<li style="margin:4px 0; color:#2ca02c">✔  DEPARTURE_DELAY > 1000 phút: 271 bản ghi (0.000%) → GIỮ (hoãn qua ngày do sự cố thật); nhãn nhị phân is_delayed_15 trung hoà giá trị cực đoan</li>
+<li style="margin:4px 0; color:#1f77b4">ℹ  Kho dữ liệu (DW): KHÔNG normalize — lưu giá trị thô nguyên bản (normalize chỉ áp dụng trong pipeline Mining cho LR/MLP)</li>
+<li style="margin:4px 0; color:#d62728">⚠  JOIN quality: 8.4% flights không map được → kiểm tra lại airlines.csv/airports.csv cho đủ</li>
+<li style="margin:4px 0; color:#2ca02c">✔  Chuyến bị hủy (CANCELLED=1): 89,884 (1.54%) → ETL vẫn nạp vào fact_flights; cột is_delayed_15=0 cho chuyến hủy</li>
+</ul>
+
+    <p style="color:#999; font-size:11px; margin-top:40px">
+      Sinh tự động bởi scripts/eda_before_etl.py
+    </p>
+    </body>
+    </html>

@@ -10,6 +10,7 @@ import logging
 import sys
 import os
 import time
+from pathlib import Path
 
 logging.basicConfig(
     level=logging.INFO,
@@ -21,7 +22,8 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+_REPO_ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(_REPO_ROOT))
 
 from etl.extract import load_airlines, load_airports, stream_flights, scan_dim_date
 from etl.transform import (
@@ -33,6 +35,7 @@ from etl.load import (
     load_dim_airlines, load_dim_airports, load_dim_dates,
     get_delay_reason_map, load_fact_flights, print_summary,
 )
+from etl.airport_id_lookup import build_faa_id_to_iata
 
 
 # ── Tuning ────────────────────────────────────────────────────────
@@ -73,6 +76,11 @@ def run_pipeline():
 
     del dim_airline, dim_airport, dim_date   # giải phóng RAM
 
+    # Map Airport ID (số) → IATA nhờ L_AIRPORT_ID.xls (CSV)
+    l_airport_file = _REPO_ROOT / "data" / "L_AIRPORT_ID.xls"
+    airports_csv = _REPO_ROOT / "data" / "airports.csv"
+    faa_id_to_iata = build_faa_id_to_iata(l_airport_file, airports_csv)
+
     # ── [4] Stream flights: read chunk → transform → insert ──
     log.info(f"\n[4/4] Stream + transform + load fact_flights (chunk={CHUNK_SIZE:,})")
 
@@ -85,8 +93,14 @@ def run_pipeline():
         total_in  += len(chunk)
         t_chunk    = time.time()
 
-        fact = transform_chunk(chunk, airline_map, airport_map,
-                               date_map, delay_reason_map)
+        fact = transform_chunk(
+            chunk,
+            airline_map,
+            airport_map,
+            date_map,
+            delay_reason_map,
+            faa_id_to_iata=faa_id_to_iata,
+        )
         del chunk   # xả ngay, không cần nữa
 
         load_fact_flights(conn, fact, chunksize=INSERT_BATCH)

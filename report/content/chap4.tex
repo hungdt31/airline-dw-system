@@ -27,6 +27,7 @@ giúp người đọc đối chiếu nhanh giữa thiết kế và hiện thực
 \begin{table}[H]
 \centering
 \caption{Cấu hình môi trường thực nghiệm}
+\vspace{4pt}
 \begin{tabular}{|l|l|}
 \hline
 \textbf{Thành phần} & \textbf{Thông số} \\ \hline
@@ -62,33 +63,128 @@ và cung cấp \textbf{sáu trang phân tích} điều hướng qua sidebar:
 \textbf{Phân tích nguyên nhân}, \textbf{Dự báo chuyến bay} và \textbf{Database Explorer}.
 Bốn trang đầu dùng chung bộ lọc OLAP (tháng/quý, hãng bay),
 cho phép thực hiện linh hoạt các phép Slice, Dice, Roll-up và Drill-down
-đã mô tả trong cơ sở lý thuyết (Mục~2.1.2).
+đã mô tả trong \nameref{sec:theory}. Từ giao diện tương tác với dữ liệu năm 2015, có thể rút ra các nhận xét sau:
 
-Từ giao diện tương tác với dữ liệu năm 2015, có thể rút ra các xu hướng sau:
+\subsubsection{Lượt chuyến và tổng phút trễ của các sân bay lớn}
 
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{img/analysis/volumn_delay.png}
+  \caption{Lượt chuyến và tổng phút trễ của các sân bay lớn.}
+  \label{fig:volumn_delay}
+\end{figure}
+
+\noindent \textbf{a. Nghịch lý giữa Atlanta (\texttt{ATL}) và Chicago (\texttt{ORD}):}
+Đây là điểm đáng chú ý nhất trong dữ liệu năm 2015.
 \begin{itemize}
-    \item \textbf{Tính mùa vụ rõ rệt:}
-          Mùa hè (tháng 6--7) và mùa đông (tháng 12--1) là hai giai đoạn trễ cao nhất ---
-          trùng với mùa bão và mùa tuyết. Các tháng thu (tháng 9--11) ổn định hơn đáng kể.
-
-    \item \textbf{Hiệu ứng tích lũy trong ngày:}
-          Trễ khởi hành trung bình \textbf{tăng dần theo khung giờ}: chuyến sáng sớm (trước 8h)
-          có tỷ lệ đúng giờ tốt nhất; chuyến tối muộn chịu ảnh hưởng dây chuyền
-          từ các trễ trước đó trong ngày.
-
-    \item \textbf{Chênh lệch giữa các hãng:}
-          OTP (On-Time Performance) giữa hãng tốt nhất và kém nhất
-          chênh 15--20 điểm phần trăm, phản ánh khác biệt trong chiến lược
-          quay đầu tàu bay, bảo trì và lịch bay.
-
-    \item \textbf{Ảnh hưởng của sân bay hub:}
-          Các sân bay lớn (ORD, ATL, DFW) tập trung lưu lượng cao
-          nên có delay trung bình vượt mặt bằng chung.
-
-    \item \textbf{Nguyên nhân chính:}
-          Hệ thống không lưu (NAS) và Late Aircraft chiếm tỷ trọng trễ lớn nhất
-          --- hai yếu tố mang tính \textit{hệ thống} mà hãng khó kiểm soát đơn lẻ.
+  \item \textbf{Lưu lượng:} \texttt{ATL} (Atlanta) dẫn đầu với hơn 743\,000 lượt chuyến, bỏ xa \texttt{ORD} (Chicago) đứng thứ hai (khoảng 615\,000 lượt).
+  \item \textbf{Chậm trễ:} thứ tự đảo ngược. \texttt{ORD} đứng đầu với hơn 9{,}2 triệu phút trễ, trong khi \texttt{ATL} dù bận rộn hơn nhưng tổng phút trễ thấp hơn đáng kể (khoảng 7{,}8 triệu phút).
 \end{itemize}
+\noindent\textbf{Nhận định.}
+Sân bay Chicago (\texttt{ORD}) dễ bị ảnh hưởng bởi chậm trễ hơn so với Atlanta, có thể do tác động của thời tiết khắc nghiệt hoặc do cấu trúc vận hành kém linh hoạt khi xảy ra sự cố.
+\vspace{0.2cm}
+\\
+\noindent \textbf{b. Nhóm ``điểm nóng'' tắc nghẽn:} Hai sân bay \texttt{LGA} (New York) và \texttt{EWR} (Newark) nổi bật với việc không nằm trong Top~10 nhộn nhịp nhất, nhưng lại lọt Top~10 tổng phút trễ cao nhất.
+
+\noindent\textbf{Nhận định.}
+Đây là minh chứng điển hình cho quá tải hoặc hạ tầng chưa đáp ứng kịp lưu lượng tại khu vực New York/New Jersey: dù số chuyến không quá lớn, một khi trễ thì thường trễ nặng.
+\vspace{0.2cm}
+\\
+\noindent \textbf{c. ``Người hùng thầm lặng'' (\texttt{SEA}, \texttt{PHX}):}
+Ngược lại nhóm trên, \texttt{SEA} (Seattle) và \texttt{PHX} (Phoenix) nằm trong nhóm nhộn nhịp nhưng không xuất hiện trong Top trễ nhiều nhất.
+
+\noindent\textbf{Nhận định.}
+Các sân bay này vận hành hiệu quả: dù lưu lượng lớn, thời gian quay đầu và lịch trình được kiểm soát tốt, nên tổng phút trễ không bị đẩy lên quá cao.
+\vspace{0.2cm}
+\\
+\noindent \textbf{d. Tương quan quy mô và rủi ro:}
+\texttt{DFW} (Dallas--Fort Worth), \texttt{DEN} (Denver) và \texttt{LAX} (Los Angeles) giữ vị trí tương đối ổn định (thường Top~3--5) ở \textit{cả hai} biểu đồ.
+
+\noindent\textbf{Nhận định.}
+Tại các siêu sân bay này, tổng phút trễ gần tỉ lệ thuận với quy mô: khi quy mô tăng, áp lực điều phối và hậu cần tăng theo, gần với quan hệ tuyến tính.
+
+\subsubsection{Tính thời điểm}
+
+% \noindent
+% Các biểu đồ trên dashboard (trung bình phút trễ theo tháng, theo giờ khởi hành, heatmap nguyên nhân--tháng) cho phép đọc song song \textbf{chu kỳ dài} (mùa, tháng) và \textbf{chu kỳ ngắn} (khung giờ trong ngày).
+
+\noindent \textbf{a. Nguyên nhân và thời điểm:}
+\begin{itemize}
+  \item \textbf{Hệ thống kiểm soát không lưu:} nguyên nhân ổn định và nặng nhất theo tháng, đặc biệt căng thẳng ở tháng cao điểm (6, 7, 12).
+  \item \textbf{Máy bay đến muộn:} bám sát biến động lưu lượng --- Hè/Lễ càng đông, trễ dây chuyền càng dễ xảy ra.
+  \item \textbf{An ninh và hãng hàng không:} gần như phẳng theo mùa --- yếu tố nội tại ổn định, ít phụ thuộc mùa vụ.
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{img/analysis/month_reason.png}
+\caption{Heatmap phân bố số chuyến bay theo nguyên nhân và tháng}
+\label{fig:month_reason}
+\end{figure}
+
+\noindent \textbf{b. Phân tích theo mùa và tháng (chu kỳ dài):}
+Biểu đồ trung bình phút trễ theo tháng cho thấy biến động rõ theo mùa:
+\begin{itemize}
+  \item \textbf{Đỉnh hè (tháng~6):} trễ nặng nhất (khoảng 10 phút trung bình). Kết hợp heatmap nguyên nhân, \textit{hệ thống kiểm soát không lưu} (NAS) và \textit{máy bay đến muộn} lên cao --- phù hợp quá tải hạ tầng do lưu lượng du lịch hè.
+  \item \textbf{Đỉnh đông (tháng~2, 12):} trễ cao do tác động kép thời tiết (bão tuyết) và nhu cầu đi lại dịp lễ Giáng sinh.
+  \item \textbf{Giai đoạn ``vàng'' (tháng~9--10):} trễ trung bình có lúc \textbf{âm} (hạ cánh sớm hơn lịch), áp lực hệ thống giảm, lịch thuận lợi hơn so với cao điểm hè/đông.
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{img/analysis/delay_month.png}
+\caption{Delay trung bình theo tháng \& mùa}
+\label{fig:delay_month}
+\end{figure}
+
+\noindent \textbf{c. Phân tích theo khung giờ (chu kỳ ngắn):}
+Biểu đồ theo giờ khởi hành minh họa hiện tượng \textit{tích tụ trễ} (delay propagation):
+\begin{itemize}
+  \item \textbf{00--06\,h (đêm khuya):} trễ thấp nhất --- hệ thống ``nghỉ'' sau đêm, đường băng thông thoáng hơn.
+  \item \textbf{Xu hướng trong ngày:} trễ trung bình tăng dần theo giờ.
+  \item \textbf{18--24\,h (tối):} cao nhất (khoảng 15 phút) --- hệ quả của việc các chuyến bay ban ngày bị trễ nhẹ, dẫn đến các chuyến bay tối dùng chung máy bay/phi hành đoàn đó bị trễ dây chuyền (hiệu ứng domino).
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{img/analysis/delay_hour.png}
+\caption{Delay theo khung giờ cất cánh}
+\label{fig:delay_hour}
+\end{figure}
+
+\subsubsection{Bản chất của sự chậm trễ}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{img/analysis/delay_reason.png}
+\caption{Delay theo nguyên nhân}
+\label{fig:delay_reason}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{img/analysis/delay_minute.png}
+\caption{Tổng phút trễ theo nguyên nhân}
+\label{fig:delay_minute}
+\end{figure}
+
+\noindent \textbf{a. Tần suất và mức độ trễ trung bình:}
+Có tương phản giữa \textit{tỷ lệ chuyến có trễ theo nguyên nhân} và \textit{phút trễ trung bình mỗi ca}:
+\begin{itemize}
+  \item \textbf{NAS:} gần 50\% số ca trễ (tần suất cao nhất), nhưng trễ trung bình mỗi ca thấp nhất nhóm (25{,}5 phút) --- nhiều vụ trễ ngắn, mang tính hệ thống.
+  \item \textbf{Hãng hàng không:} khoảng 14\% số ca, nhưng trễ trung bình cao nhất (62{,}9 phút/chuyến) --- khi trễ do hãng (kỹ thuật, tổ bay), thời gian chờ kéo dài rất dễ vượt một giờ.
+\end{itemize}
+
+\noindent \textbf{b. Tổng phút trễ:} máy bay đến muộn là ``nút thắt'' lớn.
+Trên biểu đồ \textbf{tổng phút trễ theo nguyên nhân}, \textit{máy bay đến muộn} (late aircraft) đứng thứ hai về tần suất (khoảng 30\%) nhưng đóng góp nhiều phút trễ nhất toàn hệ thống (gần 15 triệu phút).
+
+\noindent\textbf{Nhận định.}
+Điều này minh họa cho "Hiệu ứng hòn tuyết lăn" đã đề cập ở khung giờ tối. Một chuyến bay trễ ban sáng sẽ "lây lan" sự chậm trễ cho các chuyến sau, và tổng thời gian cộng dồn này là cực lớn.
+
+\noindent \textbf{c. Thời tiết:} Chỉ khoảng 6{,}14\% tổng số ca trễ, nhưng chiếm thời gian chờ trung bình lớn gần 48 phút.
+
+\noindent\textbf{Nhận định.}
+Thời tiết không xảy ra thường xuyên trên toàn mạng lưới, nhưng nó là nguyên nhân khách quan khó kiểm soát và thường gây ra sự gián đoạn đáng kể cho mỗi chuyến bay bị ảnh hưởng.
 
 % ============================================================
 \subsection{Quy trình khai phá dữ liệu}
@@ -110,7 +206,7 @@ chỉ dựa trên thông tin biết \textbf{trước} khi cất cánh?''}
     \item \textbf{Nhãn mục tiêu:} \texttt{is\_delayed\_15} ---
           giá trị 1 nếu \texttt{arrival\_delay} $\geq$ 15 phút, 0 nếu đúng giờ.
     \item \textbf{Đặc thù dữ liệu:} mất cân bằng lớp ---
-          khoảng \textbf{81\%} chuyến đúng giờ so với \textbf{19\%} trễ (chuyến không bị hủy).
+          khoảng \textbf{81.55\%} chuyến đúng giờ so với \textbf{18.45\%} trễ (chuyến không bị hủy).
     \item \textbf{Ràng buộc thực tiễn:} không sử dụng \texttt{departure\_delay}
           (trễ khởi hành) vì thông tin này chỉ biết \textit{sau khi} máy bay
           rời cổng, khiến mô hình mang tính ``phản ứng'' thay vì ``dự báo''.
@@ -125,11 +221,10 @@ chỉ dựa trên thông tin biết \textbf{trước} khi cất cánh?''}
 nhóm lấy \textbf{500.000 mẫu} theo chiến lược \textit{stratified sampling theo tháng}:
 
 \begin{itemize}
-    \item Xác định các tháng có dữ liệu trong kho (11 tháng --- thiếu tháng 10 trong nguồn gốc).
-    \item Chia đều: mỗi tháng $\approx$ $\lfloor 500{.}000 / 11 \rfloor = 45{.}454$ mẫu;
-          phần dư (6 mẫu) phân cho các tháng đầu để tổng đúng 500.000.
+    \item Xác định các tháng có dữ liệu trong kho, chia đều mỗi tháng $\approx$ $\lfloor 500{.}000 / 12 \rfloor = 41{.}666$ mẫu;
+          phần dư (8 mẫu) phân cho các tháng đầu để tổng đúng 500.000.
     \item Trong mỗi tháng, lấy ngẫu nhiên bằng \texttt{ORDER BY RANDOM()} từ bảng fact.
-    \item Sau khi ghép nối 11 chunk, toàn bộ được shuffle lại (\texttt{random\_state=42}).
+    \item Sau khi ghép nối 12 chunk, toàn bộ được shuffle lại (\texttt{random\_state=42}).
 \end{itemize}
 
 Chiến lược này đảm bảo mẫu phản ánh đúng \textbf{tính mùa vụ} của delay
@@ -138,7 +233,7 @@ khi chỉ lấy tuần tự từ đầu file.
 
 \noindent \textbf{b. Tiền xử lý}
 
-Bước này hiện thực hóa quy trình tiền xử lý đã trình bày ở Mục~2.2,
+Bước này hiện thực hóa quy trình tiền xử lý đã trình bày ở \nameref{subsec:preprocess},
 cụ thể áp dụng trên 500.000 mẫu đã lấy ở bước (a).
 Dữ liệu được xử lý qua bốn bước:
 \begin{enumerate}
@@ -155,34 +250,7 @@ Dữ liệu được xử lý qua bốn bước:
 Ngoài ra, các mô hình yêu cầu đầu vào chuẩn hóa (Logistic Regression, Neural Network)
 được áp dụng thêm \texttt{StandardScaler} (z-score) trước khi huấn luyện,
 trong khi các mô hình cây (Random Forest, XGBoost, LightGBM)
-nhận dữ liệu gốc --- đúng với lý thuyết chuẩn hóa ở Mục~2.2.
-
-% Bảng~\ref{tab:preprocess_mapping} tóm tắt ánh xạ giữa lý thuyết
-% và hiện thực cho từng bước tiền xử lý.
-
-% \begin{table}[H]
-% \centering
-% \caption{Ánh xạ quy trình tiền xử lý: lý thuyết (Mục~2.2) $\leftrightarrow$ hiện thực}
-% \vspace{5pt}
-% \small
-% \begin{tabular}{|l|l|l|}
-% \hline
-% \textbf{Bước lý thuyết} & \textbf{Hiện thực} & \textbf{Vị trí code} \\ \hline
-% Data Cleaning --- Missing  & \texttt{fillna(0)} cho delay (ETL); & \texttt{etl/transform.py} \\
-%                             & \texttt{fillna(median)} cho distance, elapsed\_time & \texttt{mining/compare\_5\_models.py} \\ \hline
-% Data Cleaning --- Outliers  & Không clip: model không dùng biến delay; & --- \\
-%                             & nhãn nhị phân ``trung hòa'' giá trị cực đoan & \\ \hline
-% Data Integration            & JOIN 3 CSV qua surrogate key (khóa thay thế) & \texttt{etl/pipeline.py} \\ \hline
-% Transformation --- Normalize & \texttt{StandardScaler} cho LR, NN & \texttt{mining/compare\_5\_models.py} \\ \hline
-% Transformation --- Feature  & \texttt{dep\_hour}, \texttt{is\_weekend}, \texttt{quarter}, & SQL query + \texttt{dim\_date} \\
-% construction                & \texttt{is\_delayed\_15} & \\ \hline
-% Transformation --- Encoding & \texttt{LabelEncoder} cho hãng, bang & \texttt{mining/compare\_5\_models.py} \\ \hline
-% Data Reduction --- Selection & 31 $\rightarrow$ 10 features; loại \texttt{departure\_delay} & \texttt{feature\_cols} \\ \hline
-% Data Reduction --- Imbalance & \texttt{class\_weight}, \texttt{scale\_pos\_weight}, & Tham số mỗi model \\
-%                              & \texttt{is\_unbalance} & \\ \hline
-% \end{tabular}
-% \label{tab:preprocess_mapping}
-% \end{table}
+nhận dữ liệu gốc.
 
 \noindent \textbf{c. Lựa chọn 10 đặc trưng đầu vào}
 
@@ -275,28 +343,27 @@ cơ chế xử lý mất cân bằng lớp:
 
 500.000 mẫu được chia \textbf{Holdout 80/20} phân tầng theo nhãn
 (\texttt{stratify=y}): 400.000 mẫu train và 100.000 mẫu test.
-Tỷ lệ delay trong cả hai tập được giữ nguyên $\approx$\,19\%.
+Tỷ lệ delay trong cả hai tập được giữ nguyên $\sim$\,19\%.
 
 \noindent \textbf{b. Bảy chỉ số đánh giá}
 
-Do bài toán mất cân bằng, nhóm sử dụng bảy chỉ số để đánh giá đa chiều:
+Do bài toán mất cân bằng, nhóm sử dụng bảy chỉ số để đánh giá đa chiều,
+sắp xếp theo \textbf{thứ tự ưu tiên} khi đọc kết quả:
 
-\begin{enumerate}
-    \item \textbf{AUC-ROC} --- diện tích dưới đường ROC,
-          đo khả năng phân biệt hai lớp \textit{ở mọi ngưỡng};
-          \textbf{chỉ số chính} cho bài toán mất cân bằng.
-    \item \textbf{Accuracy} --- tỷ lệ dự đoán đúng tổng thể;
-          có thể gây hiểu nhầm khi dữ liệu lệch.
-    \item \textbf{F1-score} (weighted) --- trung bình hài hòa Precision--Recall
-          theo trọng số lớp.
-    \item \textbf{Average Precision} --- diện tích dưới đường Precision-Recall,
-          nhạy hơn AUC khi lớp thiểu số nhỏ.
-    \item \textbf{Log Loss} --- negative log-likelihood,
-          đo chất lượng xác suất dự đoán (thấp hơn = tốt hơn).
-    \item \textbf{Brier Score} --- trung bình bình phương sai lệch
-          giữa xác suất dự đoán và nhãn thực (thấp hơn = tốt hơn).
-    \item \textbf{Thời gian huấn luyện} --- chi phí tính toán thực tế.
-\end{enumerate}
+\begin{table}[H]
+\centering
+\begin{tabular}{|c|l|p{8.2cm}|}
+\hline
+\textbf{Ưu tiên} & \textbf{Chỉ số} & \textbf{Lý do} \\ \hline
+1 & AUC-ROC & Không phụ thuộc ngưỡng, không bị ảnh hưởng mất cân bằng. \\ \hline
+2 & Average Precision & Nhạy hơn AUC-ROC với lớp thiểu số (delay). \\ \hline
+3 & F1-score & Cân bằng Precision và Recall cho lớp quan tâm. \\ \hline
+4 & Recall & Bỏ sót delay (FN) nguy hiểm hơn báo nhầm (FP). \\ \hline
+5 & Log Loss / Brier & Đánh giá chất lượng xác suất dự đoán. \\ \hline
+6 & Accuracy & Ít có giá trị --- chỉ dùng tham khảo. \\ \hline
+7 & Training time & So sánh chi phí huấn luyện giữa các thuật toán trong cùng pipeline. \\ \hline
+\end{tabular}
+\end{table}
 
 \noindent \textbf{c. Quy trình huấn luyện và đánh giá}
 
@@ -306,8 +373,8 @@ Hình~\ref{fig:mining_pipeline} tóm tắt quy trình end-to-end:
 \centering
 \fbox{\parbox{0.92\textwidth}{\centering
 \small
-\textbf{Kho dữ liệu} (5{,}8M chuyến) \\[2pt]
-$\downarrow$ \textit{Stratified sampling 500K (11 tháng)} \\[2pt]
+\textbf{Kho dữ liệu} (5{.}8M chuyến, Delay rate: 18.45\%) \\[2pt]
+$\downarrow$ \textit{Stratified sampling 500K (12 tháng)} \\[2pt]
 \textbf{Tiền xử lý} (dropna, fillna, Label Encoding) \\[2pt]
 $\downarrow$ \textit{10 đặc trưng + nhãn} \\[2pt]
 \textbf{Holdout 80/20} (stratify=y) \\[2pt]
@@ -335,38 +402,38 @@ sau khi huấn luyện trên tập train (80\%) và đánh giá trên tập test
 \setlength{\tabcolsep}{4pt}
 \begin{tabular}{|l|r|r|r|r|r|r|r|}
 \hline
-\textbf{Thuật toán} & \textbf{AUC-ROC} & \textbf{Accuracy} & \textbf{F1} & \textbf{Avg Prec.} & \textbf{Log Loss} & \textbf{Brier} & \textbf{TG (s)} \\ \hline
-Logistic Regression & 0.6978 & 0.6570 & 0.6914 & 0.4120 & 0.6233 & 0.2167 & \textbf{2.7} \\ \hline
-Random Forest       & 0.7130 & 0.6375 & 0.6756 & 0.4107 & 0.6216 & 0.2163 & 13.0 \\ \hline
-Neural Network      & 0.7342 & \textbf{0.8318} & \textbf{0.7877} & 0.4809 & \textbf{0.4197} & \textbf{0.1302} & 33.5 \\ \hline
-XGBoost             & \textbf{0.7545} & 0.7054 & 0.7324 & \textbf{0.5078} & 0.5721 & 0.1945 & 7.1 \\ \hline
-LightGBM            & 0.7509 & 0.7031 & 0.7305 & 0.5014 & 0.5770 & 0.1965 & 4.1 \\ \hline
+\textbf{Thuật toán} & \textbf{AUC-ROC} & \textbf{Accuracy} & \textbf{F1-score} & \textbf{Avg Prec.} & \textbf{Log Loss} & \textbf{Brier} & \textbf{TG (s)} \\ \hline
+Logistic Regression & 0.6982 & 0.6562 & 0.6923 & 0.4046 & 0.6216 & 0.2160 & \textbf{2.6} \\ \hline
+Random Forest       & 0.7116 & 0.6429 & 0.6818 & 0.4003 & 0.6209 & 0.2160 & 11.3 \\ \hline
+Neural Network      & 0.7332 & \textbf{0.8361} & \textbf{0.7920} & 0.4725 & \textbf{0.4130} & \textbf{0.1275} & 21.1 \\ \hline
+XGBoost             & \textbf{0.7553} & 0.7055 & 0.7341 & \textbf{0.4999} & 0.5707 & 0.1939 & 6.7 \\ \hline
+LightGBM            & 0.7519 & 0.7005 & 0.7300 & 0.4934 & 0.5760 & 0.1961 & 3.0 \\ \hline
 \end{tabular}
 \label{tab:model_comparison}
 \end{table}
 
-\paragraph{Nhận xét tổng quan.}
+\paragraph{Nhận xét tổng quan:}
 \begin{itemize}
-    \item \textbf{XGBoost dẫn đầu} về AUC-ROC (0,7545) và Average Precision (0,5078) ---
+    \item \textbf{XGBoost dẫn đầu} về AUC-ROC (0,7553) và Average Precision (0,4999) ---
           hai chỉ số quan trọng nhất cho bài toán mất cân bằng lớp.
-    \item \textbf{LightGBM} xếp sát ngay sau (AUC 0,7509)
-          nhưng huấn luyện nhanh hơn đáng kể (4,1s so với 7,1s).
-    \item \textbf{Neural Network} có Accuracy (0,8318), F1 (0,7877), Log Loss và Brier tốt nhất,
-          song phân tích Confusion Matrix ở Bước~6 cho thấy
-          Accuracy \textbf{che giấu sự thiên lệch} về lớp đa số; AUC chỉ đứng thứ ba (0,7342).
-    \item \textbf{Logistic Regression} nhanh nhất (2,7s)
-          nhưng AUC thấp nhất (0,6978) --- biên quyết định tuyến tính
+    \item \textbf{LightGBM} xếp sát ngay sau (AUC 0,7519)
+          nhưng huấn luyện nhanh hơn đáng kể (3,0s so với 6,7s).
+    \item \textbf{Neural Network} có Accuracy (0,8361), F1 (0,7920), Log Loss (0,4130) và Brier (0,1275) tốt nhất,
+          tuy nhiên phân tích Confusion Matrix ở Mục~\ref{subsubsec:confusion_matrix} cho thấy
+          Accuracy \textbf{che giấu sự thiên lệch} về lớp đa số; AUC chỉ đứng thứ ba (0,7332).
+    \item \textbf{Logistic Regression} nhanh nhất (2,6s)
+          nhưng AUC thấp nhất (0,6982) --- biên quyết định tuyến tính
           không đủ biểu diễn quan hệ phức tạp trong dữ liệu.
-    \item \textbf{Random Forest} cải thiện nhẹ hơn LR về AUC (+0,015)
-          nhưng vẫn kém Gradient Boosting; Accuracy thấp nhất nhóm (0,6375).
+    \item \textbf{Random Forest} cải thiện nhẹ hơn Logistic Regression về AUC (+0,0134)
+          nhưng vẫn kém Gradient Boosting, Accuracy thấp nhất nhóm (0,6429).
 \end{itemize}
 
 % -----------------------------------------------------------
 \subsubsection{Phân tích Confusion Matrix}
-
+\label{subsubsec:confusion_matrix}
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\textwidth]{img/confusion_matrix.jpg}
+    \includegraphics[width=\textwidth]{img/confusion_matrix.png}
     \caption{Confusion Matrix chuẩn hóa của 5 thuật toán trên tập test}
     \label{fig:confusion}
 \end{figure}
@@ -379,8 +446,8 @@ Hình~\ref{fig:confusion} trực quan hóa ma trận nhầm lẫn chuẩn hóa -
 --- Bốn ô có cường độ khá đồng đều, nghĩa là mô hình \textit{chưa phân biệt rõ ràng}
 hai lớp. Ô False Positive vẫn đậm, cho thấy hay \textbf{báo nhầm}
 chuyến đúng giờ thành trễ.
-Trên tập test, AUC-ROC lần lượt là \textbf{0,6978} (Logistic Regression --- thấp nhất nhóm)
-và \textbf{0,7130} (Random Forest --- thấp thứ hai trong nhóm).
+Trên tập test, AUC-ROC lần lượt là \textbf{0,6982} (Logistic Regression --- thấp nhất nhóm)
+và \textbf{0,7116} (Random Forest --- thấp thứ hai trong nhóm).
 
 \paragraph{Neural Network}
 --- Ô True Negative \textbf{rất đậm},
@@ -388,18 +455,18 @@ False Positive \textbf{rất nhạt}: mô hình xuất sắc nhận diện chuy�
 Tuy nhiên, ô False Negative (delay thật $\rightarrow$ đoán đúng giờ)
 lại đậm hơn True Positive --- mô hình \textbf{bỏ sót chuyến delay},
 thiên về lớp đa số.
-Điều này đi cùng bảng chỉ số: Accuracy \textbf{0,8318} (cao nhất) nhưng
-AUC-ROC chỉ \textbf{0,7342} --- \textbf{thứ ba} sau XGBoost và LightGBM, mạnh ở lớp đa số nhưng \textbf{kém nhạy} với lớp trễ.
+Điều này đi cùng bảng chỉ số: Accuracy \textbf{0,8361} (cao nhất) nhưng
+AUC-ROC chỉ \textbf{0,7332} --- \textbf{thứ ba} sau XGBoost và LightGBM, mạnh ở lớp đa số nhưng \textbf{kém nhạy} với lớp trễ.
 
 \paragraph{XGBoost \& LightGBM}
 --- Hai ô đường chéo chính đều đậm \textit{vừa phải và cân đối};
 hai ô sai nhạt tương đương nhau.
 Đây là mẫu hình \textbf{cân bằng nhất} giữa năm thuật toán,
 phù hợp với AUC-ROC cao nhất và thứ hai:
-\textbf{0,7545} (XGBoost) và \textbf{0,7509} (LightGBM), phân biệt tốt \textit{cả hai lớp} thay vì hy sinh một phía.
+\textbf{0,7553} (XGBoost) và \textbf{0,7519} (LightGBM), phân biệt tốt \textit{cả hai lớp} thay vì hy sinh một phía.
 
 \medskip
-\noindent\textit{Bài học:} \textbf{Accuracy đơn thuần gây hiểu nhầm} khi dữ liệu mất cân bằng.
+\noindent\textit{Kết luận:} \textbf{Accuracy đơn thuần gây hiểu nhầm} khi dữ liệu mất cân bằng.
 Trong thực tiễn vận hành hàng không, bỏ sót một chuyến delay
 gây hậu quả lớn hơn so với báo nhầm, do đó mô hình cân bằng
 (Gradient Boosting) phù hợp hơn cho bài toán dự báo.
@@ -408,17 +475,19 @@ gây hậu quả lớn hơn so với báo nhầm, do đó mô hình cân bằng
 \subsubsection{Phân tích Feature Importance}
 
 Hình~\ref{fig:feature_importance} trình bày Feature Importance
-của hai mô hình Gradient Boosting, mỗi bên dùng \textbf{thang đo khác nhau}:
+của hai mô hình Gradient Boosting thông qua thuộc tính
+\texttt{feature\_importances\_} của scikit-learn API.
+Cả hai đều đo \textbf{tần suất xuất hiện} (số lần feature được chọn làm điểm chia),
+nhưng với \textbf{thang biểu diễn khác nhau}:
 
 \begin{itemize}
-    \item \textbf{XGBoost --- gain (chuẩn hóa):}
-          \textit{Tỷ lệ đóng góp} vào tổng mức giảm loss function
-          khi feature được dùng làm điểm chia. Tổng = 1{,}0,
+    \item \textbf{XGBoost --- weight (chuẩn hóa):}
+          Wrapper sklearn tự động \textit{chuẩn hóa} tần suất chia về tổng = 1{,}0,
           nên mỗi giá trị nằm trong $[0, 1]$ (trục hoành max $\approx$ 0{,}18).
 
     \item \textbf{LightGBM --- split count (số đếm tuyệt đối):}
-          \textit{Số lần} feature được chọn làm điểm chia trong
-          \textbf{toàn bộ 300 cây}. Là số nguyên tuyệt đối,
+          Trả về \textit{số nguyên tuyệt đối} --- tổng số lần feature được chọn
+          làm điểm chia trong \textbf{toàn bộ 300 cây},
           có thể lên tới hàng nghìn (trục hoành max $\approx$ 2\,000).
 \end{itemize}
 
@@ -427,31 +496,48 @@ chỉ so sánh \textit{thứ tự xếp hạng} giữa hai model là có ý ngh�
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\textwidth]{img/feature_importance.jpg}
-    \caption{Feature Importance: XGBoost (gain, chuẩn hóa) và LightGBM (split count, số đếm tuyệt đối)}
+    \includegraphics[width=\textwidth]{img/feature_importance.png}
+    \caption{Feature Importance: XGBoost (weight, chuẩn hóa về $[0,1]$) và LightGBM (split count, số đếm tuyệt đối)}
     \label{fig:feature_importance}
 \end{figure}
 
-\paragraph{Kết quả phân tích:}
-\begin{enumerate}
-    \item \textbf{\texttt{distance} và \texttt{elapsed\_time}} --- hàng đầu
-          ở \textit{cả hai} mô hình. Chuyến bay dài có nhiều yếu tố rủi ro hơn
-          (thời tiết trên lộ trình, tiêu thụ nhiên liệu, tắc nghẽn không phận).
+\textbf{Những đặc trưng ``thống trị'':} Cả hai mô hình đều \textbf{đồng thuận} rằng các yếu tố kỹ thuật của chuyến bay và thời điểm khởi hành
+là quan trọng nhất để dự báo chậm trễ.
+\begin{itemize}
+    \item \textbf{Thời điểm trong ngày (\texttt{dep\_hour}):}
+          Đây là đặc trưng quan trọng nhất trong XGBoost và đứng khá cao trong LightGBM.
+          Về mặt nghiệp vụ, điều này hợp lý: chuyến sáng sớm thường ít trễ hơn,
+          trong khi chuyến chiều/tối dễ gặp \textbf{trễ dây chuyền} từ các chuyến trước.
+    \item \textbf{Khoảng cách và thời gian chặng (\texttt{distance}, \texttt{elapsed\_time}):}
+          Hai yếu tố này luôn nằm trong top~3.
+          Chuyến dài có quy trình chuẩn bị và phụ thuộc nguồn lực khác chuyến ngắn;
+          trên không còn có thể ``bù đắp'' một phần so với chặng ngắn nếu điều kiện cho phép.
+    \item \textbf{Hãng hàng không (\texttt{airline\_enc}):}
+          Vị trí cao cho thấy mỗi hãng có quy trình vận hành và tỷ lệ trễ đặc thù
+          (ví dụ một số hãng giá rẻ có thời gian quay đầu ngắn, dễ dẫn tới trễ nối tiếp).
+\end{itemize}
 
-    \item \textbf{\texttt{dep\_hour}} --- đứng thứ 3 trong XGBoost.
-          Chuyến chiều/tối chịu \textbf{hiệu ứng tích lũy} trễ trong ngày,
-          khớp với xu hướng trên dashboard.
+\textbf{Sự khác biệt giữa XGBoost và LightGBM:} Mặc dù hai mô hình dùng chung tập đặc trưng, chúng có \textbf{góc nhìn} khác nhau.
+\begin{itemize}
+    \item \textbf{XGBoost thiên về thời gian:}
+          Mô hình đặt trọng số lớn vào \texttt{dep\_hour}.
+          Hướng tối ưu hợp lý là bổ sung đặc trưng theo khung giờ
+          (ví dụ giờ cao điểm/thấp điểm, cửa sổ giờ) để khai thác thêm tín hiệu lịch trình.
+    \item \textbf{LightGBM thiên về địa điểm và quy mô chặng:}
+          Ưu tiên \texttt{origin\_enc} (sân bay đi) và \texttt{elapsed\_time} rõ hơn ---
+          gợi ý rằng mô hình đang bắt các \textbf{nút thắt} tại hub mật độ cao,
+          nơi tắc nghẽn luồng chuyến dễ lan truyền.
+\end{itemize}
 
-    \item \textbf{\texttt{airline\_enc}} --- top 4--5 ở cả hai model,
-          phù hợp quan sát OTP chênh 15--20 điểm phần trăm giữa các hãng.
-
-    \item \textbf{\texttt{origin\_enc} và \texttt{dest\_enc}} (bang) ---
-          LightGBM đặc biệt ưu tiên (top 3--4 theo split count),
-          cho thấy yếu tố địa lý là nhân tố phân biệt quan trọng.
-
-    \item \textbf{\texttt{is\_weekend} và \texttt{quarter}} có đóng góp thấp nhất ---
-          thông tin đã được ``bao hàm'' bởi \texttt{day\_of\_week} và \texttt{month}.
-\end{enumerate}
+\textbf{Những đặc trưng yếu:} Các biến mang tính chu kỳ dài hoặc nhị phân đơn giản ít giúp dự báo trực tiếp trong thiết lập hiện tại.
+\begin{itemize}
+    \item \textbf{\texttt{is\_weekend}:}
+          Đứng cuối ở cả hai bảng --- trong dữ liệu 2015, cuối tuần hay ngày thường
+          không tách biệt tỷ lệ trễ mạnh bằng các yếu tố nội tại chuyến bay.
+    \item \textbf{\texttt{quarter}:}
+          Khả năng dự báo thấp, tính mùa vụ được thể hiện rõ hơn ở \texttt{month},
+          vốn có thứ hạng cao hơn trong cả hai mô hình.
+\end{itemize}
 
 Thứ bậc này \textbf{nhất quán} với xu hướng quan sát từ OLAP:
 dashboard phát hiện xu hướng vĩ mô, mô hình lượng hóa mức đóng góp
@@ -484,8 +570,8 @@ có thể lý giải vì sao XGBoost và LightGBM (Gradient Boosting) đạt hi�
 
     \item \textbf{LightGBM: tốc độ vượt trội, chất lượng tương đương:}
           Leaf-wise growth + Histogram-based splitting
-          giúp LightGBM nhanh hơn XGBoost rõ rệt (4,1s vs.\ 7,1s)
-          trong khi chỉ thua khoảng 0,004 AUC (0,7509 so với 0,7545).
+          giúp LightGBM nhanh hơn XGBoost rõ rệt (3,0s vs.\ 6,7s)
+          trong khi chỉ thua khoảng 0,034 AUC (0,7519 so với 0,7553).
 \end{enumerate}
 
 % -----------------------------------------------------------

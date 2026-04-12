@@ -1,95 +1,86 @@
 % ============================================================
-% SECTION 6: KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN
+% SECTION 6: KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN (đồng bộ report/chap5.tex)
 % ============================================================
 \section{Kết luận}
 
-% --- Slide 29 ---
-\begin{frame}{Insight từ dữ liệu 2015 \& Khuyến nghị}
-\begin{enumerate}
-  \item \textbf{Hiệu ứng dây chuyền là nguyên nhân delay lớn nhất}\\
-        Late Aircraft + NAS chiếm tỷ trọng cao nhất.\\
-        {\small\textit{$\to$ Tăng buffer thời gian quay đầu tàu bay tại hub.}}
-
-  \item \textbf{Mùa hè (T6--T7) và mùa đông (T12--T1) = hai đỉnh delay}\\
-        {\small\textit{$\to$ Phương án dự phòng riêng cho mùa cao điểm.}}
-
-  \item \textbf{Chuyến sáng sớm ($<$8h) ít delay nhất}\\
-        {\small\textit{$\to$ Ưu tiên chuyến sáng nếu cần đúng giờ.}}
-
-  \item \textbf{Hãng bay ảnh hưởng có hệ thống:} chênh 15--20 điểm \% OTP.\\
-        {\small\textit{$\to$ Benchmark OTP công khai tạo áp lực cải thiện.}}
-
-  \item \textbf{distance, elapsed\_time, dep\_hour}: top feature importance.\\
-        {\small\textit{$\to$ Chuyến dài + chiều/tối = rủi ro cao nhất.}}
-\end{enumerate}
-\end{frame}
-
-% --- Slide 30 ---
-\begin{frame}{Đánh giá hoàn thành mục tiêu}
+% --- Đánh giá hoàn thành ---
+\begin{frame}{Đánh giá mức hoàn thành so với mục tiêu}
 \begin{table}
 \centering
-\small
-\begin{tabular}{clc}
-\toprule
+\small\slideTablePad
+\begin{tabular}{|c|l|p{8cm}|}
+\hline
 \textbf{\#} & \textbf{Mục tiêu} & \textbf{Kết quả} \\
-\midrule
-1 & Data Warehouse chuẩn hóa & \textcolor{green!60!black}{\ding{51}} Star Schema, 5,3M bản ghi, ETL 3--8 phút \\
-2 & Dashboard OLAP đa trang & \textcolor{green!60!black}{\ding{51}} 6 trang, Slice/Dice/Roll-up/Drill-down \\
-3 & Mô hình dự báo delay & \textcolor{green!60!black}{\ding{51}} XGBoost AUC 0,7545 (best), 5 models so sánh \\
-\bottomrule
+\hline
+1 & Data Warehouse chuẩn hóa & Star Schema (\texttt{fact\_flights} + 4 chiều, 6 chỉ mục OLAP), $\sim$5{,}6M bản ghi, ETL 3--8 phút \\
+\hline
+2 & Dashboard OLAP đa chiều & 6 trang Streamlit + Plotly, Slice/Dice/Roll-up/Drill-down (bộ lọc tháng/quý, hãng, địa lý --- mỗi trang một góc nhìn về chậm chuyến)\\
+\hline
+3 & Mô hình dự báo delay & 5 thuật toán, 7 chỉ số; XGBoost AUC $\sim$ 0{,}76 (best) \\
+\hline
 \end{tabular}
 \end{table}
 
-\vspace{3mm}
+\vspace{1mm}
 \begin{block}{Giá trị hệ thống}
-Không chỉ trực quan hóa dữ liệu lịch sử, hệ thống còn \textbf{hỗ trợ ra quyết định}
-bằng mô hình dự báo delay \textbf{trước cất cánh}.
+\small
+Không chỉ trực quan hóa lịch sử, hệ thống còn \textbf{hỗ trợ ra quyết định} bằng dự báo xác suất trễ \textbf{trước cất cánh}.
 \end{block}
 \end{frame}
 
-% --- Slide 31 ---
+% --- Insight & khuyến nghị ---
+\begin{frame}{Insight thực tế \& khuyến nghị (dữ liệu 2015)}
+Kết hợp OLAP dashboard và Feature Importance:
+
+\begin{enumerate}\setlength\itemsep{0.25em}
+  \item \textbf{Dây chuyền (Late Aircraft + NAS):} tỷ trọng trễ lớn --- trễ sáng có thể lan 3--5 chuyến.\\
+        {\footnotesize\textit{Khuyến nghị:} tăng buffer quay đầu (\textit{turnaround}) tại hub trung chuyển.}
+
+  \item \textbf{Hai đỉnh delay:} mùa hè (T6--T7) và mùa đông (T12--T1) --- trùng bão/tuyết.\\
+        {\footnotesize\textit{Khuyến nghị:} phương án vận hành riêng mùa cao điểm (nhân lực mặt đất, lịch bay).}
+
+  \item \textbf{Chuyến trước 8h:} ít trễ nhất (chưa tích lũy trong ngày).\\
+        {\footnotesize\textit{Khuyến nghị hành khách:} ưu tiên chuyến sáng nếu cần nối chuyến quan trọng.}
+
+  \item \textbf{Sân bay là nút thắt:} ATL vs ORD minh họa điều phối/hạ tầng; NAS $\sim$50\% ca trễ.\\
+        {\footnotesize\textit{Khuyến nghị:} minh bạch năng lực giải tỏa, điều phối slot --- cắt chuỗi trễ dây chuyền.}
+
+  \item \textbf{Quãng đường + thời gian bay} quan trọng trong mô hình; \textbf{bang} (\texttt{origin}/\texttt{dest}) phản ánh địa lý/khí hậu.
+\end{enumerate}
+\end{frame}
+
+% --- Hạn chế ---
 \begin{frame}{Hạn chế}
+
 \begin{enumerate}
-  \item \textbf{Dữ liệu chỉ bao phủ năm 2015}\\
-        Mô hình có thể không phù hợp với thực tế sau COVID-19.
-        Tuy nhiên \textit{phương pháp luận} vẫn áp dụng được khi đổi nguồn dữ liệu.
+  \item \textbf{Dữ liệu chỉ năm 2015.} Insight/mô hình là ``ảnh chụp'' một năm; hạ tầng, FAA, hành vi sau COVID có thể khác --- \textit{phương pháp luận} (DW + pipeline ML) vẫn tái sử dụng khi đổi nguồn.
 
-  \item \textbf{SQLite không phù hợp production}\\
-        Single-writer, không concurrent access, một số OLAP query mất vài giây.
+  \item \textbf{SQLite không phù hợp production.} Single-writer, không concurrent; OLAP nặng vài giây --- đủ demo, chưa đủ đa người dùng.
 
-  \item \textbf{AUC $\approx$ 0,75 --- còn khoảng cách}\\
-        Thiếu dữ liệu thời tiết, bảo trì, lịch sử delay từng tail number.
+  \item \textbf{AUC-ROC $\sim$ 0{,}76.} Cố tình \textbf{không} dùng \texttt{departure\_delay} (dự báo thật sự). Thiếu thời tiết thực, bảo trì, lịch sử theo \texttt{tail\_number} --- có thể cải thiện thêm khoảng 0{,}03--0{,}10 AUC.
 
-  \item \textbf{Chưa có Clustering / Association Rules}\\
-        Chỉ tập trung classification và OLAP.
+  \item \textbf{Chưa có Clustering / Association Rules.} Tập trung classification + OLAP; có thể bổ sung phân cụm sân bay hoặc luật kết hợp (vd.\ hãng + sân bay ORD + T12 $\Rightarrow$ trễ).
 \end{enumerate}
 \end{frame}
 
-% --- Slide 32 ---
+% --- Hướng phát triển ---
 \begin{frame}{Hướng phát triển}
-\begin{columns}[T,onlytextwidth]
-\begin{column}{0.48\textwidth}
-\begin{block}{Dữ liệu \& Mô hình}
+
 \begin{enumerate}
-  \item Mở rộng dữ liệu 2010--2023 (BTS).
-  \item Tích hợp thời tiết NOAA.
-  \item Thêm feature ngày lễ.
-  \item SHAP giải thích từng dự báo.
+  \item \textbf{Dữ liệu nhiều năm (BTS 2010--2023):} xu hướng dài hạn, tác động COVID (2020--2021), mô hình tổng quát hơn.
+
+  \item \textbf{Thời tiết NOAA} theo sân bay + ngày --- yếu tố lớn mà mô hình hiện chưa có.
+
+  \item \textbf{Nâng cấp hạ tầng:} PostgreSQL / ClickHouse; Docker + cloud (EC2 / Cloud Run); \textbf{REST API} (FastAPI) phục vụ dự báo theo yêu cầu.
+
+  \item \textbf{SHAP:} giải thích \textit{từng} dự báo --- dashboard không chỉ ``có trễ'' mà ``vì sao trễ''.
+
+  \item \textbf{Streaming thời gian thực:} Kafka nhận chuyến bay real-time + Spark Streaming --- từ phân tích lịch sử sang hỗ trợ quyết định tức thời.
 \end{enumerate}
-\end{block}
-\end{column}
-\begin{column}{0.48\textwidth}
-\begin{block}{Hạ tầng \& Triển khai}
-\begin{enumerate}
-  \item PostgreSQL / ClickHouse thay SQLite.
-  \item Docker + Cloud deploy.
-  \item REST API (FastAPI) cho dự báo real-time.
-  \item Apache Kafka + Spark Streaming.
-\end{enumerate}
-\end{block}
-\end{column}
-\end{columns}
 \end{frame}
+
+% --- Tài liệu tham khảo (file \texttt{Sections/references.tex}) ---
+\input{Sections/references}
 
 % --- Slide cuối ---
 \setbeamertemplate{footline}{}

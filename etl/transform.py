@@ -4,9 +4,13 @@ etl/transform.py  —  Vectorized transforms (không dùng df.apply row-by-row)
 Mọi phép tính đều dùng numpy/pandas vectorized → nhanh gấp 50-100x so với apply().
 """
 
+from __future__ import annotations
+
 import pandas as pd
 import numpy as np
 import logging
+
+from etl.airport_id_lookup import resolve_airport_codes
 
 log = logging.getLogger(__name__)
 
@@ -77,12 +81,22 @@ def transform_chunk(
     airport_map: dict,
     date_map: dict,
     delay_reason_map: dict,
+    faa_id_to_iata: dict[int, str] | None = None,
 ) -> pd.DataFrame:
     """
     Transform 1 chunk flights thô → fact_flights rows.
     Toàn bộ vectorized — KHÔNG dùng apply/iterrows.
+
+    faa_id_to_iata: map BTS Airport ID (số) → IATA; None hoặc {} = bỏ qua.
     """
     df = chunk.copy()
+
+    # ── Chuẩn hóa mã sân bay: ID số → IATA (trước khi map surrogate key) ──
+    if faa_id_to_iata:
+        df["ORIGIN_AIRPORT"] = resolve_airport_codes(df["ORIGIN_AIRPORT"], faa_id_to_iata)
+        df["DESTINATION_AIRPORT"] = resolve_airport_codes(
+            df["DESTINATION_AIRPORT"], faa_id_to_iata
+        )
 
     # ── Điền NaN delay bằng 0 ──────────────────────────────
     delay_cols = ["DEPARTURE_DELAY", "ARRIVAL_DELAY",

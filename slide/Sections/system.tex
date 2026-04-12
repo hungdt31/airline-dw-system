@@ -21,7 +21,7 @@
   },
   arr/.style={-{Latex[length=2mm]}, thick, BKTemplate}
 ]
-\node[widebox] (src) {\textbf{Nguồn dữ liệu thô}\\\scriptsize flights.csv, airlines.csv, airports.csv};
+\node[widebox] (src) {\textbf{Nguồn dữ liệu thô}\\\scriptsize flights.csv, airlines.csv, airports.csv, L\_AIRPORT\_ID.xls};
 \node[widebox, below=of src] (etl) {\textbf{Tầng ETL}\\\scriptsize extract $\rightarrow$ transform $\rightarrow$ load theo chunk};
 \node[widebox, below=of etl] (dw) {\textbf{Data Warehouse SQLite}\\\scriptsize Star Schema: 1 fact + 4 dimension tables};
 \node[box, below left=12mm and 10mm of dw] (dash) {\textbf{Dashboard OLAP}\\\scriptsize 6 trang phân tích tương tác};
@@ -34,6 +34,11 @@
 \draw[thick, BKTemplate] (dw.south) -- (fork);
 \draw[arr] (fork) -| (dash.north);
 \draw[arr] (fork) -| (mine.north);
+% Hai chiều, nằm ngang: dùng cùng mức cao độ (trung điểm 2 ô) để tránh xiên.
+\coordinate (dmid) at ($(dash.center)!0.5!(mine.center)$);
+\draw[thick, BKTemplate, <->, >=Latex]
+  (dash.east |- dmid) -- (mine.west |- dmid)
+  node[midway, font=\scriptsize, fill=white, inner sep=1pt, yshift=1.8mm] {chia sẻ dữ liệu};
 \end{tikzpicture}%
 }
 
@@ -72,7 +77,7 @@ thêm thuật toán mới $\not\Rightarrow$ sửa schema kho.
 \begin{column}{0.55\textwidth}
 \textbf{Bảng sự kiện} \texttt{fact\_flights}
 \begin{itemize}
-  \item $\approx$ 5,3M bản ghi sau ETL.
+  \item $\approx$ 5,6M bản ghi sau ETL.
   \item FK tới 4 bảng chiều.
   \item Đo lường: delay, distance, elapsed time,
         cờ hủy/chuyển hướng/trễ $\geq$15p.
@@ -88,17 +93,21 @@ thêm thuật toán mới $\not\Rightarrow$ sửa schema kho.
 \end{itemize}
 \end{column}
 \begin{column}{0.45\textwidth}
-\small
-\begin{tabular}{l r}
-\toprule
+\small\slideTablePad
+\begin{tabular}{|l|r|}
+\hline
 \textbf{Bảng} & \textbf{Số dòng} \\
-\midrule
-\texttt{fact\_flights}     & 5{,}332{,}914 \\
+\hline
+\texttt{fact\_flights}     & 5{,}657{,}773 \\
+\hline
 \texttt{dim\_airline}      & 14 \\
+\hline
 \texttt{dim\_airport}      & 322 \\
+\hline
 \texttt{dim\_date}         & 365 \\
+\hline
 \texttt{dim\_delay\_reason}& 6 \\
-\bottomrule
+\hline
 \end{tabular}
 
 \vspace{4mm}
@@ -126,6 +135,7 @@ thêm thuật toán mới $\not\Rightarrow$ sửa schema kho.
         \texttt{schema.sql} + PRAGMA WAL.
   \item \textbf{Nạp dimension + lookup maps}\\
         Dictionary ánh xạ surrogate key.
+        \texttt{L\_AIRPORT\_ID.xls} ánh xạ mã sân bay số thành mã IATA.
   \item \textbf{Streaming fact\_flights}\\
         Chunk 100K dòng $\to$ transform $\to$ INSERT batch $\to$ giải phóng RAM.
 \end{enumerate}
@@ -143,7 +153,7 @@ thêm thuật toán mới $\not\Rightarrow$ sửa schema kho.
 \begin{itemize}
   \item Cột delay: \texttt{fillna(0.0)}.
   \item Thiếu FK: \texttt{dropna} loại dòng.
-  \item Kết quả: giữ $\approx$91,65\% bản ghi.
+  \item Kết quả: giữ $\sim$ 97.23\% bản ghi.
 \end{itemize}
 \end{column}
 \end{columns}

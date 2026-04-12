@@ -20,8 +20,8 @@
 
 % Define course name, report name and report title.
 \newcommand{\coursename}{Khai phá Dữ liệu}
-\newcommand{\reportname}{Xây dựng Hệ thống Kho Dữ liệu và Khai phá Dữ liệu cho Lĩnh vực Hàng không}
-\newcommand{\reporttitle}{BTL HK252}
+\newcommand{\reportname}{XÂY DỰNG HỆ THỐNG KHO DỮ LIỆU VÀ KHAI PHÁ DỮ LIỆU CHO LĨNH VỰC HÀNG KHÔNG}
+\newcommand{\reporttitle}{BÁO CÁO BÀI TẬP LỚN}
 
 \newcommand{\studentname}{Đoàn Trí Hùng (2211322)\\Nguyễn Mạnh Hùng (2211337)\\Nguyễn Cao Cường (2210429)}
 \newcommand{\teachername}{Thầy Đỗ Thanh Thái}
@@ -42,6 +42,41 @@ Trường Đại học Bách Khoa Hồ Chí Minh - ĐHQG HCM\\
 
 \pagenumbering{roman}
 \input{content/title.tex}
+
+% ============================================================
+% BẢNG PHÂN CHIA CÔNG VIỆC
+% ============================================================
+\thispagestyle{plain}
+\begin{center}
+  {\large\bfseries BẢNG PHÂN CHIA CÔNG VIỆC}
+\end{center}
+
+\begin{tabular}{|c|l|c|p{5.5cm}|p{2.5cm}|}
+\hline
+\textbf{STT} & \textbf{Họ và Tên} & \textbf{MSSV} & \textbf{Nhiệm vụ} & \textbf{Phần trăm hoàn thành} \\
+\hline
+1 & Đoàn Trí Hùng  & 2211322 &
+  Xây dựng pipeline ETL, thiết kế Star Schema (SQLite),
+  phát triển Dashboard Streamlit 6 trang,
+  viết báo cáo.
+  & 100\% \\
+\hline
+2 & Nguyễn Mạnh Hùng & 2211337 &
+  Huấn luyện và so sánh 5 mô hình ML
+  (Logistic Regression, Random Forest, Neural Network,
+  XGBoost, LightGBM),
+  phân tích kết quả, Feature Importance.
+  & 100\% \\
+\hline
+3 & Nguyễn Cao Cường & 2210429 &
+  Khảo sát dữ liệu nguồn,
+  xây dựng bộ truy vấn OLAP,
+  tổng hợp tài liệu tham khảo, làm slide thuyết trình.
+  & 100\% \\
+\hline
+\end{tabular}
+
+\pagebreak
 
 \tableofcontents
 \pagebreak

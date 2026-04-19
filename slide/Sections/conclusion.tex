@@ -1,105 +1,100 @@
-% ============================================================
-% SECTION 6: KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN (đồng bộ report/chap5.tex)
-% ============================================================
 \section{Kết luận}
 
-% --- Đánh giá hoàn thành ---
-\begin{frame}{Đánh giá mức hoàn thành so với mục tiêu}
-\begin{table}
-\centering
-\small\slideTablePad
-\begin{tabular}{|c|l|p{8cm}|}
-\hline
-\textbf{\#} & \textbf{Mục tiêu} & \textbf{Kết quả} \\
-\hline
-1 & Data Warehouse chuẩn hóa & Star Schema (\texttt{fact\_flights} + 4 chiều, 6 chỉ mục OLAP), $\sim$5{,}6M bản ghi, ETL 3--8 phút \\
-\hline
-2 & Dashboard OLAP đa chiều & 6 trang Streamlit + Plotly, Slice/Dice/Roll-up/Drill-down (bộ lọc tháng/quý, hãng, địa lý --- mỗi trang một góc nhìn về chậm chuyến)\\
-\hline
-3 & Mô hình dự báo delay & 5 thuật toán, 7 chỉ số; XGBoost AUC $\sim$ 0{,}76 (best) \\
-\hline
-\end{tabular}
-\end{table}
+\begin{frame}{Tổng kết mức độ hoàn thành mục tiêu}
+  \renewcommand{\arraystretch}{1.2}
+  \begin{table}
+    \centering
+    \begin{tabular}{|c|l|p{7.5cm}|}
+      \hline
+      \textbf{\#} & \textbf{Trọng tâm} & \textbf{Thành quả thực nghiệm} \\
+      \hline
+      1 & \textbf{Hạ tầng dữ liệu} & Hiện thực hóa Kho dữ liệu chuẩn Star Schema với $\sim$5.6 triệu bản ghi; tối ưu hóa truy vấn qua hệ thống 6 chỉ mục chuyên biệt. \\
+      \hline
+      2 & \textbf{Phân tích tương tác} & Dashboard đa chiều tích hợp đầy đủ năng lực OLAP (Slice, Dice, Drill-down), hỗ trợ khai phá tri thức từ tổng thể đến chi tiết. \\
+      \hline
+      3 & \textbf{Mô hình dự báo} & Đánh giá khách quan 5 thuật toán; trong đó XGBoost đạt hiệu suất tối ưu ($AUC \approx 0.76$) cho bài toán dự báo trước giờ bay. \\
+      \hline
+    \end{tabular}
+  \end{table}
 
-\vspace{1mm}
-\begin{block}{Giá trị hệ thống}
-\small
-Không chỉ trực quan hóa lịch sử, hệ thống còn \textbf{hỗ trợ ra quyết định} bằng dự báo xác suất trễ \textbf{trước cất cánh}.
-\end{block}
+  \textbf{Giá trị hệ thống:} Hệ thống đã chuyển đổi thành công từ việc chỉ \textbf{mô tả lịch sử} sang khả năng \textbf{hỗ trợ ra quyết định} thông qua dự báo xác suất rủi ro trước khi vận hành.
 \end{frame}
 
-% --- Insight & khuyến nghị ---
-\begin{frame}{Insight thực tế \& khuyến nghị (dữ liệu 2015)}
-Kết hợp OLAP dashboard và Feature Importance:
-
-\begin{enumerate}\setlength\itemsep{0.25em}
-  \item \textbf{Dây chuyền (Late Aircraft + NAS):} tỷ trọng trễ lớn --- trễ sáng có thể lan 3--5 chuyến.\\
-        {\footnotesize\textit{Khuyến nghị:} tăng buffer quay đầu (\textit{turnaround}) tại hub trung chuyển.}
-
-  \item \textbf{Hai đỉnh delay:} mùa hè (T6--T7) và mùa đông (T12--T1) --- trùng bão/tuyết.\\
-        {\footnotesize\textit{Khuyến nghị:} phương án vận hành riêng mùa cao điểm (nhân lực mặt đất, lịch bay).}
-
-  \item \textbf{Chuyến trước 8h:} ít trễ nhất (chưa tích lũy trong ngày).\\
-        {\footnotesize\textit{Khuyến nghị hành khách:} ưu tiên chuyến sáng nếu cần nối chuyến quan trọng.}
-
-  \item \textbf{Sân bay là nút thắt:} ATL vs ORD minh họa điều phối/hạ tầng; NAS $\sim$50\% ca trễ.\\
-        {\footnotesize\textit{Khuyến nghị:} minh bạch năng lực giải tỏa, điều phối slot --- cắt chuỗi trễ dây chuyền.}
-
-  \item \textbf{Quãng đường + thời gian bay} quan trọng trong mô hình; \textbf{bang} (\texttt{origin}/\texttt{dest}) phản ánh địa lý/khí hậu.
-\end{enumerate}
+\begin{frame}{Tri thức khai phá \& Đề xuất vận hành}
+  \begin{enumerate}
+    \item \textbf{Hiệu ứng Domino (Late Aircraft):} Trễ chuyến có tính chất lây lan mạng lưới. \textbf{Khuyến nghị:} Tăng thời gian đệm (\textit{Buffer}) tại các khung giờ cao điểm để ngắt chuỗi trễ dây chuyền.
+    \item \textbf{Tính mùa vụ rõ rệt:} Đỉnh điểm trễ chuyến rơi vào mùa hè và mùa đông do áp lực vận hành và thời tiết. \textbf{Khuyến nghị:} Tối ưu hóa nguồn lực nhân sự mặt đất theo chu kỳ mùa.
+    \item \textbf{Ưu thế khung giờ sáng:} Các chuyến trước 08:00 có tỷ lệ đúng giờ cao nhất. \textbf{Khuyến nghị hành khách:} Ưu tiên bay sớm cho các hành trình có nối chuyến phức tạp.
+    \item \textbf{Nút thắt hạ tầng (NAS):} Các yếu tố điều phối sân bay chiếm $\sim$50\% nguyên nhân trễ. \textbf{Khuyến nghị:} Minh bạch năng lực điều phối Slot để giảm tải áp lực cho các Hub trung chuyển lớn.
+  \end{enumerate}
 \end{frame}
 
-% --- Hạn chế ---
-\begin{frame}{Hạn chế}
-
-\begin{enumerate}
-  \item \textbf{Dữ liệu chỉ năm 2015.} Insight/mô hình là ``ảnh chụp'' một năm; hạ tầng, FAA, hành vi sau COVID có thể khác --- \textit{phương pháp luận} (DW + pipeline ML) vẫn tái sử dụng khi đổi nguồn.
-
-  \item \textbf{SQLite không phù hợp production.} Single-writer, không concurrent; OLAP nặng vài giây --- đủ demo, chưa đủ đa người dùng.
-
-  \item \textbf{AUC-ROC $\sim$ 0{,}76.} Cố tình \textbf{không} dùng \texttt{departure\_delay} (dự báo thật sự). Thiếu thời tiết thực, bảo trì, lịch sử theo \texttt{tail\_number} --- có thể cải thiện thêm khoảng 0{,}03--0{,}10 AUC.
-
-  \item \textbf{Chưa có Clustering / Association Rules.} Tập trung classification + OLAP; có thể bổ sung phân cụm sân bay hoặc luật kết hợp (vd.\ hãng + sân bay ORD + T12 $\Rightarrow$ trễ).
-\end{enumerate}
+\begin{frame}{Giới hạn của nghiên cứu}
+  \begin{itemize}
+    \item \textbf{Tính thời điểm của dữ liệu:} Dữ liệu năm 2015 mang tính chất "ảnh chụp" lịch sử. Tuy nhiên, \textbf{phương pháp luận} về xây dựng Kho dữ liệu và Pipeline ML hoàn toàn có thể tái sử dụng cho các tập dữ liệu mới hơn.
+    \item \textbf{Hiệu năng hạ tầng:} Sử dụng SQLite phù hợp cho giai đoạn thử nghiệm (PoC) nhưng sẽ gặp rào cản về khả năng truy cập đồng thời trong môi trường vận hành thực tế.
+    \item \textbf{Ranh giới dự báo:} Việc không sử dụng các giá trị delay thực tế giúp dự báo có giá trị thực tiễn nhưng cũng đặt ra thách thức lớn về độ chính xác khi thiếu các biến số về thời tiết thực tế và lịch sử bảo trì tàu bay.
+    \item \textbf{Phạm vi phương pháp luận:} Tập trung chủ yếu vào bài toán phân lớp và trực quan hóa. Chưa ứng dụng các kỹ thuật \textbf{Clustering} (phân nhóm sân bay/tuyến đường) và \textbf{Association Rules} để nhận diện các mô thức trễ chuyến đặc thù gắn liền với các điều kiện vận hành phức tạp.
+  \end{itemize}
 \end{frame}
 
-% --- Hướng phát triển ---
-\begin{frame}{Hướng phát triển}
+\begin{frame}{Tầm nhìn \& Định hướng phát triển}
+  Hệ thống được thiết kế với khả năng mở rộng linh hoạt, hướng tới một nền tảng phân tích toàn diện và sẵn sàng cho môi trường vận hành thực tế:
+  
+  \begin{enumerate}
+    \item \textbf{Mở rộng quy mô và tính tổng quát của dữ liệu:}
+    \begin{itemize}
+      \item \textbf{Tích hợp dữ liệu nhiều năm (2010--2025):} Phân tích biến động dài hạn và tác động hậu đại dịch.
+      \item \textbf{Làm giàu đặc trưng (Feature Engineering):} Kết hợp dữ liệu thời tiết thực tế từ NOAA để tối ưu hóa độ chính xác của mô hình.
+    \end{itemize}
 
-\begin{enumerate}
-  \item \textbf{Dữ liệu nhiều năm (BTS 2010--2023):} xu hướng dài hạn, tác động COVID (2020--2021), mô hình tổng quát hơn.
+    \item \textbf{Hiện đại hóa hạ tầng \& Chuyển dịch Cloud-native:}
+    \begin{itemize}
+      \item Nâng cấp hệ quản trị dữ liệu sang PostgreSQL hoặc ClickHouse để tối ưu hóa hiệu năng OLAP.
+      \item Triển khai giải pháp \textbf{FastAPI} trên nền tảng Docker/Cloud.
+    \end{itemize}
 
-  \item \textbf{Thời tiết NOAA} theo sân bay + ngày --- yếu tố lớn mà mô hình hiện chưa có.
-
-  \item \textbf{Nâng cấp hạ tầng:} PostgreSQL / ClickHouse; Docker + cloud (EC2 / Cloud Run); \textbf{REST API} (FastAPI) phục vụ dự báo theo yêu cầu.
-
-  \item \textbf{SHAP:} giải thích \textit{từng} dự báo --- dashboard không chỉ ``có trễ'' mà ``vì sao trễ''.
-
-  \item \textbf{Streaming thời gian thực:} Kafka nhận chuyến bay real-time + Spark Streaming --- từ phân tích lịch sử sang hỗ trợ quyết định tức thời.
-\end{enumerate}
+    \item \textbf{Nâng cao năng lực phân tích thông minh:}
+    \begin{itemize}
+      \item \textbf{Explainable AI (SHAP):} Minh bạch hóa các quyết định của mô hình, giúp Dashboard không chỉ dự báo "trễ" mà còn giải thích được "tại sao trễ".
+      \item \textbf{Xử lý dòng thời gian thực (Real-time Pipeline):} Ứng dụng Kafka và Spark Streaming để chuyển đổi từ phân tích lịch sử sang hỗ trợ quyết định tức thời.
+    \end{itemize}
+  \end{enumerate}
 \end{frame}
 
 % --- Tài liệu tham khảo (file \texttt{Sections/references.tex}) ---
+
 \input{Sections/references}
 
+  
+
 % --- Slide cuối ---
+
 \setbeamertemplate{footline}{}
+  
 
 \begin{frame}
-    \centering
-    \vspace{1cm}
-    \textbf{\Huge{- THE END - }}\\
-    \vspace{0.2cm}
-    \textit{\Large{Cảm ơn thầy đã lắng nghe phần trình bày của nhóm em}}\\
-    \vspace{15pt}
-    \begin{columns}
-        \begin{column}{0.4\textwidth}
-            \centering
-            \includegraphics[width=0.8\textwidth]{paper.jpg}
-        \end{column}
+
+  \centering
+
+  \vspace{1cm}
+
+  \textbf{\Huge{- THE END - }}\\
+
+  \vspace{0.2cm}
+
+  \textit{\Large{Cảm ơn thầy đã lắng nghe phần trình bày của nhóm em}}\\
+
+  \vspace{15pt}
+
+  \begin{columns}
+    \begin{column}{0.4\textwidth}
+      \centering
+      \includegraphics[width=0.8\textwidth]{paper.jpg}
+      \end{column}
         \begin{column}{0.6\textwidth}
-            \centering
-            Kính chúc thầy luôn mạnh khỏe, nhiều niềm vui và luôn giữ được ngọn lửa đam mê với nghề.
-        \end{column}
-    \end{columns}
+        \centering
+        Kính chúc thầy luôn mạnh khỏe, nhiều niềm vui và luôn giữ được ngọn lửa đam mê với nghề.
+    \end{column}
+  \end{columns}
 \end{frame}

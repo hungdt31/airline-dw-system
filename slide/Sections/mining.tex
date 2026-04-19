@@ -46,15 +46,15 @@ chỉ dựa trên thông tin biết \textbf{trước} khi cất cánh?''}
 \vspace{1mm}
 \textbf{b. Tiền xử lý} (4 bước)
 \begin{enumerate}\setlength\itemsep{0.12em}
-  \item Loại dòng thiếu nhãn hoặc khóa: \texttt{target}, \texttt{month}, \texttt{day\_of\_week}, \texttt{airline\_iata}.
-  \item \textbf{Median} cho \texttt{distance}, \texttt{elapsed\_time} khi thiếu.
-  \item \texttt{dep\_hour} $\in [0,23]$; thiếu $\to$ 12 (giờ trưa).
-  \item \textbf{Label Encoding:} \texttt{airline\_iata}$\to$\texttt{airline\_enc},
-        \texttt{origin\_state}$\to$\texttt{origin\_enc}, \texttt{dest\_state}$\to$\texttt{dest\_enc}.
+  \item Loại bỏ các bản ghi không có nhãn dự báo (\texttt{is\_delayed\_15}) hoặc thiếu các khóa dữ liệu quan trọng (\texttt{month}, \texttt{day\_of\_week}, \texttt{airline\_iata}).
+  \item Gán giá trị \textbf{Median} cho missing value của các cột \texttt{distance}, \texttt{elapsed\_time}.
+  \item \textbf{Trích xuất giờ dự kiến (\texttt{dep\_hour}):} lấy 2 chữ số đầu của định dạng HHMM, gán giá trị $\in [0,23]$, trường hợp thiếu $\to$ mặc định 12 (giờ trưa).
+  \item \textbf{Label Encoding:} chuyển đổi các định danh văn bản (Hãng bay, Bang) thành mã số để mô hình có thể tính toán, \texttt{airline\_iata}$\to$\texttt{airline\_enc},
+  \texttt{origin\_state}$\to$\texttt{origin\_enc}, \texttt{dest\_state}$\to$\texttt{dest\_enc}.
 \end{enumerate}
 
-\vspace{1mm}
-\footnotesize\textit{LR \& MLP: thêm \texttt{StandardScaler}; RF / XGBoost / LightGBM: dữ liệu gốc.}
+% \vspace{1mm}
+% \footnotesize\textit{LR \& MLP: thêm \texttt{StandardScaler}; RF / XGBoost / LightGBM: dữ liệu gốc.}
 \end{frame}
 
 % --- 10 đặc trưng ---
@@ -96,48 +96,96 @@ IATA sân bay cụ thể $\to$ dùng \textbf{bang}.
 \end{frame}
 
 % --- 5 thuật toán ---
-\begin{frame}{Lựa chọn thuật toán \& xử lý mất cân bằng}
-\small
-\begin{table}
-\centering
-\scriptsize\slideTablePad
-\begin{tabular}{|c|l|l|}
-\hline
-\textbf{\#} & \textbf{Thuật toán} & \textbf{Trường phái / lý do ngắn} \\
-\hline
-1 & Logistic Regression & Tuyến tính --- baseline, giải thích được \\
-\hline
-2 & Random Forest       & Bagging --- robust nhiễu \\
-\hline
-3 & Neural Network (MLP) & Phi tuyến phức tạp \\
-\hline
-4 & XGBoost             & Boosting --- GBDT, L1/L2 \\
-\hline
-5 & LightGBM            & Boosting --- nhanh, leaf-wise \\
-\hline
-\end{tabular}
-\end{table}
+% \begin{frame}{Lựa chọn thuật toán \& xử lý mất cân bằng}
+% \small
+% \begin{table}
+% \centering
+% \scriptsize\slideTablePad
+% \begin{tabular}{|c|l|l|}
+% \hline
+% \textbf{\#} & \textbf{Thuật toán} & \textbf{Trường phái / lý do ngắn} \\
+% \hline
+% 1 & Logistic Regression & Tuyến tính --- baseline, giải thích được \\
+% \hline
+% 2 & Random Forest       & Bagging --- robust nhiễu \\
+% \hline
+% 3 & Neural Network (MLP) & Phi tuyến phức tạp \\
+% \hline
+% 4 & XGBoost             & Boosting --- GBDT, L1/L2 \\
+% \hline
+% 5 & LightGBM            & Boosting --- nhanh, leaf-wise \\
+% \hline
+% \end{tabular}
+% \end{table}
 
-\vspace{2mm}
-\begin{columns}[T,onlytextwidth]
-\begin{column}{0.48\textwidth}
-\scriptsize\textbf{Cân bằng lớp (trọng số, không resample)}
-\begin{itemize}\setlength\itemsep{0.1em}
-  \item LR, RF: \texttt{class\_weight='balanced'}
-  \item XGBoost: \texttt{scale\_pos\_weight}
-  \item LightGBM: \texttt{is\_unbalance=True}
-\end{itemize}
-\end{column}
-\begin{column}{0.52\textwidth}
-\scriptsize\textbf{Cấu hình chính (tóm tắt)}
-\begin{itemize}\setlength\itemsep{0.1em}
-  \item LR: \texttt{saga}, C=1.0, max\_iter=200
-  \item RF: 100 cây, depth 10, leaf 50
-  \item MLP: [10$\to$64$\to$32$\to$1], Adam, $\alpha$=0.001
-  \item XGB/LGBM: 300 cây, depth 6, lr=0.05, subsample=0.8
-\end{itemize}
-\end{column}
-\end{columns}
+% \vspace{2mm}
+% \begin{columns}[T,onlytextwidth]
+% \begin{column}{0.48\textwidth}
+% \scriptsize\textbf{Cân bằng lớp (trọng số, không resample)}
+% \begin{itemize}\setlength\itemsep{0.1em}
+%   \item LR, RF: \texttt{class\_weight='balanced'}
+%   \item XGBoost: \texttt{scale\_pos\_weight}
+%   \item LightGBM: \texttt{is\_unbalance=True}
+% \end{itemize}
+% \end{column}
+% \begin{column}{0.52\textwidth}
+% \scriptsize\textbf{Cấu hình chính (tóm tắt)}
+% \begin{itemize}\setlength\itemsep{0.1em}
+%   \item LR: \texttt{saga}, C=1.0, max\_iter=200
+%   \item RF: 100 cây, depth 10, leaf 50
+%   \item MLP: [10$\to$64$\to$32$\to$1], Adam, $\alpha$=0.001
+%   \item XGB/LGBM: 300 cây, depth 6, lr=0.05, subsample=0.8
+% \end{itemize}
+% \end{column}
+% \end{columns}
+% \end{frame}
+
+\begin{frame}{Logistic Regression --- Nền tảng phân lớp tuyến tính}
+  \textbf{Định nghĩa:} Là mô hình phân lớp cơ bản, sử dụng hàm Sigmoid để chuyển đổi các tổ hợp tuyến tính của đặc trưng thành xác suất nằm trong khoảng $[0, 1]$.
+  \vspace{2mm}
+  \\
+  \textbf{Cấu hình tham số:}
+  \begin{itemize}
+    \item \texttt{solver="saga"}: Thuật toán tối ưu hóa mạnh mẽ, xử lý hiệu quả tập dữ liệu lớn (500,000 mẫu) và hỗ trợ điều chuẩn L2.
+    \item \texttt{C=1.0} (Regularization): Đóng vai trò là bộ lọc giúp mô hình không bị quá khớp (overfit), tăng khả năng dự báo trên dữ liệu mới.
+    \item \texttt{class\_weight="balanced"}: Tự động điều chỉnh trọng số để xử lý dữ liệu mất cân bằng (tỷ lệ trễ $\approx 18.45\%$), đảm bảo lớp "Delayed" không bị áp đảo.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Random Forest --- Sức mạnh từ sự đồng thuận}
+  \textbf{Định nghĩa:} Thuật toán thuộc họ Bagging, xây dựng một "khu rừng" gồm nhiều cây quyết định hoạt động độc lập và song song. Kết quả cuối cùng dựa trên sự đồng thuận của đa số các cây.
+  \vspace{2mm}
+  \\
+  \textbf{Cấu hình tham số:}
+  \begin{itemize}
+    \item \texttt{n\_estimators=100}: Xây dựng 100 cây quyết định độc lập giúp kết quả dự báo ổn định và giảm thiểu sai số ngẫu nhiên.
+    \item \texttt{max\_depth=10}: Giới hạn độ sâu của cây để ngăn chặn hiện tượng "học vẹt" (Overfitting), giữ lại các quy luật tổng quát.
+    \item \texttt{min\_samples\_leaf=50}: Yêu cầu mỗi lá chứa ít nhất 50 mẫu, giúp loại bỏ các quy tắc quá chi tiết và tập trung vào các đặc điểm có tính thống kê cao.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Neural Network --- Khai phá quy luật phi tuyến phức tạp}
+  \textbf{Định nghĩa:} Mạng thần kinh đa tầng (MLP) mô phỏng cách não bộ xử lý thông tin, mạnh mẽ trong việc nhận diện các mối quan hệ phi tuyến giữa giờ bay, hãng bay và khoảng cách.
+  \vspace{2mm}
+  \\
+  \textbf{Cấu hình tham số:}
+  \begin{itemize}
+    \item \texttt{hidden\_layer\_sizes=(64, 32)}: Kiến trúc 2 tầng ẩn (64 và 32 neuron) giúp nén đặc trưng ban đầu thành các biểu diễn trừu tượng và sâu sắc hơn.
+    \item \texttt{solver="adam"}: Bộ tối ưu hóa thông minh tự điều chỉnh tốc độ học, giúp mô hình hội tụ về kết quả tốt nhất nhanh chóng.
+    \item \texttt{early\_stopping=True}: Tự ngắt huấn luyện khi hiệu suất không còn cải thiện, bảo vệ tính tổng quát và tiết kiệm tài nguyên.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Gradient Boosting --- Học hỏi từ sai lầm}
+  \textbf{Định nghĩa:} Khác với Bagging, các cây trong GBDT (Gradient Boosting Decision Tree) được xây dựng \textbf{tuần tự}. Cây sau tập trung sửa chữa những sai sót của các cây trước đó.
+  \vspace{2mm}
+  \\
+  \textbf{Cấu hình tham số:}
+  \begin{itemize}
+    \item \texttt{learning\_rate=0.05}: Tốc độ học nhỏ giúp mô hình tiến tới tối ưu bền bỉ, không bỏ sót các quy luật tinh tế của hiện tượng trễ chuyến.
+    \item \textbf{Xử lý mất cân bằng:} Sử dụng \texttt{scale\_pos\_weight} (XGBoost) và \texttt{is\_unbalance=True} (LightGBM) để điều chỉnh Gradient cho lớp thiểu số.
+    \item \textbf{Cải tiến LightGBM:} Cơ chế phát triển theo lá (\textit{Leaf-wise}) giúp đạt độ chính xác cao và tốc độ huấn luyện vượt trội so với thế hệ cũ.
+  \end{itemize}
 \end{frame}
 
 % --- Đánh giá ---
@@ -235,71 +283,77 @@ LightGBM            & 0.7519 & 0.7005 & 0.7300 & 0.4934 & 0.5760 & 0.1961 & 3.0 
 \end{frame}
 
 % --- Feature Importance ---
-\begin{frame}{Feature Importance (ảnh)}
+\begin{frame}{Feature Importance}
 \centering
 \includegraphics[width=\linewidth,keepaspectratio]{feature_importance.png}
 \end{frame}
 
-\begin{frame}{Feature Importance: cách đọc \& Top drivers}
-\textbf{Thang đo khác nhau} (không so trực tiếp số tuyệt đối):
-\begin{itemize}\setlength\itemsep{0.12em}
-  \item \textbf{XGBoost --- weight (chuẩn hóa):} tần suất chia trong cây, tổng $\sim 1$; trục ngang $\sim 0{,}18$ (max).
-  \item \textbf{LightGBM --- split count:} số lần feature được chọn trong 300 cây (có thể $\sim$ nghìn).
-\end{itemize}
-$\Rightarrow$ Chỉ so sánh \textbf{thứ hạng} giữa hai model.
-
-\vspace{2mm}
-\textbf{Đặc trưng thống trị:}
-\begin{itemize}\setlength\itemsep{0.12em}
-  \item \texttt{dep\_hour} --- quan trọng nhất (XGBoost); LightGBM cũng xếp cao.
-  \item \texttt{distance}, \texttt{elapsed\_time} --- luôn top~3.
-  \item \texttt{airline\_enc} --- khác biệt quy trình/tỉ lệ trễ giữa hãng.
-\end{itemize}
-
-\vspace{1mm}
-\textbf{XGBoost} thiên \textbf{thời gian}; \textbf{LightGBM} thiên \textbf{origin\_enc}, \texttt{elapsed\_time} (hub, quy mô chặng).
-
-\vspace{1mm}
-\texttt{is\_weekend}, \texttt{quarter} yếu nhất; mùa vụ thể hiện rõ hơn ở \texttt{month}.
+\begin{frame}{Feature Importance --- Các yếu tố gây trễ chuyến}
+  Hệ thống đánh giá mức độ ảnh hưởng của 10 đặc trưng đầu vào thông qua hai mô hình mạnh nhất là XGBoost và LightGBM:
+  
+  \begin{itemize}
+      \item \textbf{Khác biệt về thang đo:}
+      \begin{itemize}
+        \item \textbf{XGBoost (Weight):} Dựa trên tần suất đặc trưng được dùng để chia nhánh cây (tổng $\approx 1$).
+        \item \textbf{LightGBM (Split Count):} Tổng số lần đặc trưng xuất hiện trong 300 cây quyết định.
+        \item \textit{Nguyên tắc:} Chỉ so sánh \textbf{thứ hạng} ưu tiên, không so sánh trị số tuyệt đối giữa hai mô hình.
+      \end{itemize}
+  
+      \item \textbf{Các đặc trưng thống trị:}
+      \begin{itemize}
+        \item \textbf{\texttt{dep\_hour}:} Yếu tố quan trọng nhất. Trễ chuyến có xu hướng tích lũy vào các khung giờ cao điểm trong ngày.
+        \item \textbf{\texttt{distance} \& \texttt{elapsed\_time}:} Luôn nằm trong Top 3, cho thấy độ dài chặng bay ảnh hưởng trực tiếp đến khả năng dự báo.
+        \item \textbf{\texttt{airline\_enc}:} Phản ánh sự khác biệt về quy trình vận hành và hiệu suất đúng giờ giữa các hãng bay.
+      \end{itemize}
+  
+      \item \textbf{Đặc trưng thứ yếu:} Các biến thời gian vĩ mô như \texttt{is\_weekend} hay \texttt{quarter} có tác động yếu hơn so với \texttt{month} (tính mùa vụ).
+  \end{itemize}
 \end{frame}
 
-% --- Tổng hợp GBDT ---
-\begin{frame}{Tại sao Gradient Boosting tốt nhất?}
-\small
-\begin{enumerate}\setlength\itemsep{0.25em}
-  \item \textbf{Quan hệ phi tuyến} --- LR không đủ biên quyết định tuyến tính; GBDT chia vùng dữ liệu.
-  \item \textbf{Interaction tự học} --- ví dụ hãng $\times$ tháng $\times$ hub (không cần feature tay).
-  \item \textbf{Boosting vs Bagging} --- cây sau sửa residual cây trước; RF vote trung bình độc lập.
-  \item \textbf{Cân bằng lớp} --- \texttt{scale\_pos\_weight}, \texttt{is\_unbalance} chỉnh gradient.
-  \item \textbf{LightGBM:} leaf-wise + histogram $\to$ \textbf{3{,}0s} vs.\ \textbf{6{,}7s} (XGB), AUC chỉ kém \textbf{0{,}0034} (0{,}7519 vs.\ 0{,}7553).
-\end{enumerate}
+\begin{frame}{Tại sao Gradient Boosting mang lại hiệu quả cao nhất?}
+  Kết quả thực nghiệm cho thấy dòng thuật toán GBDT (Gradient Boosting Decision Tree) vượt trội nhờ các cơ chế học máy hiện đại:
+  
+  \begin{enumerate}
+      \item \textbf{Học hỏi từ sai lầm (Sequential Learning):} Khác với Random Forest (học song song), Boosting xây dựng các cây kế tiếp để sửa chữa sai số (\textit{Residuals}) của các cây đứng trước.
+      \item \textbf{Khả năng bắt quan hệ phi tuyến:} Tự động phân chia vùng dữ liệu phức tạp và tự học các tương tác giữa các biến (ví dụ: Hãng $\times$ Tháng $\times$ Sân bay) mà không cần can thiệp thủ công.
+      \item \textbf{Xử lý dữ liệu mất cân bằng tối ưu:} Sử dụng trực tiếp các tham số \texttt{scale\_pos\_weight} (XGB) và \texttt{is\_unbalance} (LGBM) để điều chỉnh Gradient, thay vì phải thực hiện kỹ thuật \textit{resampling} dữ liệu thô.
+      \item \textbf{Hiệu suất thực thi vượt trội (LightGBM):} 
+      \begin{itemize}
+        \item Thời gian huấn luyện chỉ \textbf{3.0s} (so với 6.7s của XGBoost) nhờ kỹ thuật Histogram-based.
+        \item Duy trì độ chính xác cao (AUC 0.7519) với tốc độ nhanh gấp đôi.
+      \end{itemize}
+  \end{enumerate}
+  
 \end{frame}
 
 % --- Giới hạn ---
-\begin{frame}{Những trường hợp mô hình còn sai}
-\small
-Dù Gradient Boosting Decision Tree đạt hiệu suất tốt nhất, AUC $\approx 0{,}76$ vẫn còn khoảng cách tới lý tưởng.
-
-\vspace{2mm}
-\begin{columns}[T,onlytextwidth]
-\begin{column}{0.48\textwidth}
-\begin{block}{Hạn chế}
-\begin{itemize}\setlength\itemsep{0.15em}
-  \item Thời tiết cực đoan đột xuất (không có feature thời tiết thực).
-  \item Delay nội bộ (thiếu tổ bay, bảo trì) --- không có trên lịch.
-\end{itemize}
-\end{block}
-\end{column}
-\begin{column}{0.48\textwidth}
-\begin{block}{Hạn chế (tt.)}
-\begin{itemize}\setlength\itemsep{0.15em}
-  \item Hub/hãng ít mẫu --- encoding kém đại diện.
-  \item Ngày lễ đặc biệt (Thanksgiving, Giáng sinh) --- chưa có feature riêng.
-\end{itemize}
-\end{block}
-\end{column}
-\end{columns}
-
-\vspace{3mm}
-$\Rightarrow$ Hướng cải thiện: bổ sung thông tin thời tiết, feature ngày lễ.
+\begin{frame}{Phân tích Sai số \& Hạn chế Hệ thống}
+  \begin{small}
+  Mặc dù dòng thuật toán GBDT đạt hiệu suất vượt trội, chỉ số $AUC \approx 0{,}76$ cho thấy mô hình vẫn gặp khó khăn trước các biến số "nhiễu" không nằm trong dữ liệu huấn luyện.
+  
+  \begin{columns}[T,onlytextwidth]
+  \begin{column}{0.48\textwidth}
+  \begin{block}{Yếu tố khách quan ngoại biên}
+  \begin{itemize}
+    \item \textbf{Biến động thời tiết:} Các hiện tượng cực đoan đột xuất chưa được tích hợp qua dữ liệu thời gian thực (Real-time Weather API).
+    \item \textbf{Sự cố vận hành nội bộ:} Các lỗi kỹ thuật tàu bay hoặc thiếu hụt nhân sự không xuất hiện trong lịch trình dự kiến.
+  \end{itemize}
+  \end{block}
+  \end{column}
+  
+  \begin{column}{0.48\textwidth}
+  \begin{block}{Đặc trưng dữ liệu \& Mô hình}
+  \begin{itemize}
+    \item \textbf{Độ thưa dữ liệu (Data Sparsity):} Các hãng bay hoặc sân bay nhỏ (Hubs) có ít mẫu khiến việc mã hóa (Encoding) kém tính đại diện.
+    \item \textbf{Tính bất thường của ngày lễ:} Các đợt cao điểm đột biến (Thanksgiving, Giáng sinh) chưa có đặc trưng riêng để tách biệt với ngày thường.
+  \end{itemize}
+  \end{block}
+  \end{column}
+  \end{columns}
+  
+  \vspace{3mm}
+  \begin{alertblock}{Hướng cải thiện chiến lược}
+  Chuyển đổi từ dự báo dựa trên lịch trình thuần túy sang \textbf{dự báo đa nguồn}: Tích hợp dữ liệu thời tiết thực tế và làm giàu đặc trưng (Feature Engineering) về các sự kiện cộng đồng.
+  \end{alertblock}
+  \end{small}
 \end{frame}

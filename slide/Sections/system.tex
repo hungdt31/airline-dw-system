@@ -48,113 +48,196 @@ Dashboard và Mining đều \textbf{chỉ đọc} từ kho.
 \end{frame}
 
 % --- Slide 11 ---
-\begin{frame}{Nguyên tắc luồng dữ liệu}
-\begin{enumerate}
-  \item \textbf{Luồng chính một chiều}\\
-        Nguồn thô $\rightarrow$ ETL $\rightarrow$ Kho.
-        Có thể tái tạo bất kỳ lúc nào bằng cách chạy lại ETL.
+\begin{frame}{Nguyên tắc luồng dữ  liệu}
+  \begin{itemize}
+      \item \textbf{Luồng dữ liệu Một chiều (Unidirectional Flow)} \\
+      Mô hình: \texttt{Raw Data} $\rightarrow$ \texttt{ETL} $\rightarrow$ \texttt{Data Warehouse}. \\
+      Đảm bảo tính \textbf{tái lập}: Mọi trạng thái dữ liệu có thể khôi phục bằng cách chạy lại pipeline.
+  
+      \item \textbf{Nguyên tắc "Read-only" đối với Kho dữ liệu} \\
+      Dashboard và Mining chỉ có quyền truy xuất (\textbf{Read}), không có quyền ghi. \\
+      Giúp duy trì \textbf{Single Source of Truth}, bảo vệ tính toàn vẹn của Schema.
+  
+      \item \textbf{Tích hợp Liên thông ở Tầng Ứng dụng} \\
+      Dashboard kết nối trực tiếp với kết quả từ Mining thay vì ghi ngược vào kho. Tránh gây "nhiễu" cấu trúc dữ liệu nền tảng.
+  \end{itemize}
+  
+  \vspace{2mm}
+  \begin{alertblock}{Giá trị cốt lõi: Tính Độc lập (Decoupling)}
+      Cho phép phát triển song song: Cập nhật logic Dashboard hoặc nâng cấp thuật toán Mining mà không cần tái cấu trúc toàn bộ hệ thống ETL hay Schema kho.
+  \end{alertblock}
+  \end{frame}
 
-  \item \textbf{Hai lớp tiêu thụ chỉ đọc}\\
-        Dashboard và Mining đều chỉ \textbf{đọc} từ kho, không ghi ngược.
-        Giữ schema ổn định, tránh xung đột dữ liệu.
+\begin{frame}{Mục tiêu của Pipeline ETL}
+  \begin{columns}[c,onlytextwidth]
+  \begin{column}{0.52\textwidth}
+  \textbf{Thiết kế Kho dữ liệu theo Mô hình Star Schema:}
 
-  \item \textbf{Chia sẻ kết quả giữa 2 lớp}\\
-        Dashboard gọi mô hình từ lớp Mining (hiển thị xác suất trễ)
-        --- kết nối ở mức ứng dụng, không thay đổi kho.
-\end{enumerate}
-
-\vspace{3mm}
-\begin{block}{Lợi ích}
-Mỗi lớp phát triển và kiểm thử \textbf{độc lập}:
-thay đổi logic dashboard $\not\Rightarrow$ sửa ETL;
-thêm thuật toán mới $\not\Rightarrow$ sửa schema kho.
-\end{block}
+  \begin{itemize}
+    \item \textbf{Fact Table:} Lưu trữ các chỉ số định lượng then chốt (Time, Distance, Delay labels), trung tâm của mọi phép phân tích.
+    \item \textbf{Dimension Tables:} Cung cấp ngữ cảnh phong phú (Hãng bay, Sân bay, Thời gian, Nguyên nhân), cho phép thực hiện các truy vấn phân tích đa chiều thông qua phép JOIN.
+    \item \textbf{Query Optimization:} Triển khai chiến lược lập chỉ mục (Indexing) trên các khóa ngoại để tối ưu hóa tốc độ truy vấn và hiệu năng hệ thống.
+  \end{itemize}
+  \end{column}
+  \begin{column}{0.48\textwidth}
+  \centering
+  \begin{tikzpicture}[
+    scale=0.85, transform shape,
+    fact/.style={rectangle, draw=BKTemplate, fill=BKTemplate!10,
+      minimum width=2.6cm, minimum height=1cm, align=center,
+      font=\small\bfseries, rounded corners=3pt},
+    dim/.style={rectangle, draw=BKTemplate!70, fill=white,
+      minimum width=2.2cm, minimum height=0.7cm, align=center,
+      font=\scriptsize, rounded corners=2pt},
+    arr/.style={-{Latex[length=1.5mm]}, thick, BKTemplate!60}
+  ]
+  \node[fact] (f) {fact\_flights\\{\scriptsize 5,6M dòng}};
+  \node[dim, above left=8mm and -3mm of f]  (d1) {dim\_airline};
+  \node[dim, above right=8mm and -3mm of f] (d2) {dim\_airport};
+  \node[dim, below left=8mm and -3mm of f]  (d3) {dim\_date};
+  \node[dim, below right=8mm and -3mm of f] (d4) {dim\_delay\\\_reason};
+  \draw[arr] (d1) -- (f);
+  \draw[arr] (d2) -- (f);
+  \draw[arr] (d3) -- (f);
+  \draw[arr] (d4) -- (f);
+  \end{tikzpicture}
+  \end{column}
+  \end{columns}
 \end{frame}
 
-% --- Slide 12 ---
-\begin{frame}{Star Schema: Mô hình dữ liệu}
-\begin{columns}[T,onlytextwidth]
-\begin{column}{0.55\textwidth}
-\textbf{Bảng sự kiện} \texttt{fact\_flights}
-\begin{itemize}
-  \item $\approx$ 5,6M bản ghi sau ETL.
-  \item FK tới 4 bảng chiều.
-  \item Đo lường: delay, distance, elapsed time,
-        cờ hủy/chuyển hướng/trễ $\geq$15p.
-\end{itemize}
+\begin{frame}{Kiến trúc hệ thống ETL: Từ Dữ liệu thô đến Kho lưu trữ}
+  Quy trình được thiết kế theo mô hình xử lý dòng (Streaming) nhằm tối ưu hóa tài nguyên RAM và đảm bảo tốc độ xử lý dữ liệu lớn.
+  
+  \begin{itemize}
+      \item \textbf{Extract (Trích xuất):} Đọc dữ liệu thô từ CSV theo từng khối (Chunks), tối ưu hóa kiểu dữ liệu ngay từ bước nạp.
+      \item \textbf{Transform (Biến đổi):} Chuẩn hóa mã định danh, xử lý dữ liệu khuyết thiếu và tính toán vector hóa.
+      \item \textbf{Load (Nạp dữ liệu):} Chuyển đổi dữ liệu vào mô hình Star Schema trong SQLite với cơ chế ghi Batch.
+  \end{itemize}
+  
+  \begin{block}{Hiệu quả hệ thống}
+      \begin{itemize}
+          \item Xử lý hàng triệu bản ghi trong 3--8 phút.
+          \item Duy trì mức sử dụng RAM ổn định (~120MB) nhờ cơ chế Generator.
+      \end{itemize}
+  \end{block}
+  \end{frame}
 
-\vspace{2mm}
-\textbf{4 bảng chiều}
-\begin{itemize}
-  \item \texttt{dim\_airline}: 14 hãng.
-  \item \texttt{dim\_airport}: 322 sân bay (IATA, bang, tọa độ).
-  \item \texttt{dim\_date}: 365 ngày (năm$\to$quý$\to$tháng$\to$tuần$\to$thứ).
-  \item \texttt{dim\_delay\_reason}: 6 loại nguyên nhân.
-\end{itemize}
-\end{column}
-\begin{column}{0.45\textwidth}
-\small\slideTablePad
-\begin{tabular}{|l|r|}
-\hline
-\textbf{Bảng} & \textbf{Số dòng} \\
-\hline
-\texttt{fact\_flights}     & 5{,}657{,}773 \\
-\hline
-\texttt{dim\_airline}      & 14 \\
-\hline
-\texttt{dim\_airport}      & 322 \\
-\hline
-\texttt{dim\_date}         & 365 \\
-\hline
-\texttt{dim\_delay\_reason}& 6 \\
-\hline
-\end{tabular}
+\begin{frame}{Bước 1: Extract - Trích xuất và Tối ưu bộ nhớ}
+  Giai đoạn này không chỉ đơn thuần là đọc file mà là một bộ lọc thông minh giúp bảo vệ tài nguyên hệ thống:
+  
+  \begin{itemize}
+      \item \textbf{Cơ chế Streaming (Generator):} Sử dụng tham số \texttt{chunksize=100,000} để chia nhỏ dữ liệu. Dữ liệu được đọc và xả khỏi RAM theo từng khối, ngăn chặn tình trạng tràn bộ nhớ.
+      \item \textbf{Kỹ thuật Downcasting:} Ép kiểu dữ liệu tường minh (\texttt{int8}, \texttt{int16}, \texttt{float32}) ngay khi đọc. Kỹ thuật này giúp tiết kiệm khoảng \textbf{60\% dung lượng RAM} trên mỗi khối xử lý.
+      \item \textbf{Lọc dữ liệu tại nguồn (Selective Reading):}
+          \begin{itemize}
+              \item Chỉ trích xuất các cột cần thiết (\texttt{USECOLS}).
+              \item Loại bỏ ngay các bản ghi thiếu thông tin định danh quan trọng (\texttt{AIRLINE}, \texttt{ORIGIN\_AIRPORT}, \texttt{DESTINATION\_AIRPORT}).
+          \end{itemize}
+      \item \textbf{Quét danh mục độc lập:} Thực hiện một lượt quét riêng (\texttt{scan\_dim\_date}) để thu thập các giá trị thời gian duy nhất cho bảng Dimension.
+  \end{itemize}
+  \end{frame}
 
-\vspace{4mm}
-\begin{block}{Ưu điểm}
-\begin{itemize}
-  \item Truy vấn đơn giản, ít JOIN.
-  \item 6 chỉ mục OLAP.
-  \item Đủ nhẹ cho SQLite.
-\end{itemize}
-\end{block}
-\end{column}
-\end{columns}
+\begin{frame}{Bước 2: Transform - Tối ưu hóa Vector \& Logic nghiệp vụ}
+  Giai đoạn biến đổi dữ liệu được thiết kế tối ưu hóa cho hiệu suất cực cao (tăng 50-100x) nhờ tư duy xử lý song song trên mảng:
+  
+  \begin{itemize}
+      \item \textbf{Chiến lược Vector hóa (No-Loops):}
+          \begin{itemize}
+              \item Sử dụng \texttt{numpy.select} thay cho \texttt{if-else} để phân loại nguyên nhân trễ chuyến.
+              \item Tính toán đồng thời trên toàn bộ cột dữ liệu, loại bỏ hoàn toàn vòng lặp \texttt{for}.
+          \end{itemize}
+      \item \textbf{Làm giàu dữ liệu thời gian (Rich Date Dimension):}
+          \begin{itemize}
+              \item Chuyển đổi Ngày/Tháng/Năm thành 11 thuộc tính phân tích (Quý, Tuần, Thứ, Cờ cuối tuần...).
+              \item Tự động sinh khóa \texttt{date\_key} (YYYYMMDD) để tối ưu phép JOIN.
+          \end{itemize}
+      \item \textbf{Kỹ thuật đặc trưng (Feature Engineering):}
+          \begin{itemize}
+              \item Tạo các biến phân loại: Chuyến bay trễ ($>15$p), Bị hủy, Bị chuyển hướng.
+              \item Chuẩn hóa mã sân bay: Giải quyết xung đột giữa mã số (BTS) và mã chữ (IATA).
+          \end{itemize}
+      \item \textbf{Bảo vệ tính toàn vẹn (Integrity):} Loại bỏ triệt để các bản ghi không khớp khóa ngoại (Foreign Keys) trước khi nạp vào kho.
+  \end{itemize}
+  \end{frame}
+
+\begin{frame}{Bước 3: Load - Hiện thực hóa Kho dữ liệu}
+  Giai đoạn cuối cùng tập trung vào việc tối ưu hóa cấu trúc lưu trữ và đảm bảo tính toàn vẹn tham chiếu cho các tác vụ phân tích:
+  
+  \begin{itemize}
+      \item \textbf{Tối ưu hóa Engine (SQLite Tuning):}
+          \begin{itemize}
+              \item Kích hoạt \texttt{PRAGMA WAL} (Write-Ahead Logging) để tối ưu hiệu suất ghi dữ liệu lớn.
+              \item Cấu hình \texttt{Synchronous=NORMAL} giúp tăng tốc độ xử lý I/O đĩa cứng.
+          \end{itemize}
+      \item \textbf{Quản lý Khóa thay thế (Surrogate Keys):}
+          \begin{itemize}
+              \item Tự động ánh xạ mã định danh tự nhiên (IATA) sang khóa số nguyên (\texttt{Integer keys}).
+              \item Xây dựng Dictionary mapping giúp tầng Transform thay thế dữ liệu thô bằng các khóa ngoại chuẩn xác.
+          \end{itemize}
+      \item \textbf{Chiến lược nạp Batch (Batch Loading):}
+          \begin{itemize}
+              \item Chia nhỏ dữ liệu Fact thành các đợt 50,000 dòng để nạp vào Database.
+              \item Cơ chế \texttt{Commit} từng giai đoạn giúp đảm bảo an toàn dữ liệu và giải phóng bộ nhớ đệm.
+          \end{itemize}
+  \end{itemize}
+
+  \end{frame}
+
+  \begin{frame}{Kết quả ETL: Mô hình dữ liệu}
+    \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.55\textwidth}
+    \textbf{Bảng sự kiện} \texttt{fact\_flights}
+    \begin{itemize}
+      \item $\approx$ 5,6M bản ghi sau ETL.
+      \item FK tới 4 bảng chiều.
+      \item Đo lường: delay, distance, elapsed time,
+            cờ hủy/chuyển hướng/trễ $\geq$15p.
+    \end{itemize}
+    
+    \vspace{2mm}
+    \textbf{4 bảng chiều}
+    \begin{itemize}
+      \item \texttt{dim\_airline}: 14 hãng.
+      \item \texttt{dim\_airport}: 322 sân bay (IATA, bang, tọa độ).
+      \item \texttt{dim\_date}: 365 ngày (năm$\to$quý$\to$tháng$\to$tuần$\to$thứ).
+      \item \texttt{dim\_delay\_reason}: 6 loại nguyên nhân.
+    \end{itemize}
+    \end{column}
+    \begin{column}{0.45\textwidth}
+    \small\slideTablePad
+    \begin{tabular}{|l|r|}
+    \hline
+    \textbf{Bảng} & \textbf{Số dòng} \\
+    \hline
+    \texttt{fact\_flights}     & 5{,}657{,}773 \\
+    \hline
+    \texttt{dim\_airline}      & 14 \\
+    \hline
+    \texttt{dim\_airport}      & 322 \\
+    \hline
+    \texttt{dim\_date}         & 365 \\
+    \hline
+    \texttt{dim\_delay\_reason}& 6 \\
+    \hline
+    \end{tabular}
+    \end{column}
+    \end{columns}
+    \end{frame}
+
+\begin{frame}{Kết quả ETL: Bảng sự kiện}
+  \begin{center}
+  \includegraphics[width=0.65\textwidth,height=0.9\textheight]{./images/system/1.png}
+  \end{center}
 \end{frame}
 
-% --- Slide 13 ---
-\begin{frame}{Pipeline ETL}
-\begin{columns}[T,onlytextwidth]
-\begin{column}{0.55\textwidth}
-\textbf{4 bước tuần tự:}
-\begin{enumerate}
-  \item \textbf{Đọc dimension nhỏ}\\
-        \texttt{airlines.csv}, \texttt{airports.csv} vào RAM;
-        quét \texttt{flights.csv} 1 lần $\to$ \texttt{dim\_date}.
-  \item \textbf{Khởi tạo schema}\\
-        \texttt{schema.sql} + PRAGMA WAL.
-  \item \textbf{Nạp dimension + lookup maps}\\
-        Dictionary ánh xạ surrogate key.
-        \texttt{L\_AIRPORT\_ID.xls} ánh xạ mã sân bay số thành mã IATA.
-  \item \textbf{Streaming fact\_flights}\\
-        Chunk 100K dòng $\to$ transform $\to$ INSERT batch $\to$ giải phóng RAM.
-\end{enumerate}
-\end{column}
-\begin{column}{0.45\textwidth}
-\textbf{Tối ưu:}
-\begin{itemize}
-  \item \texttt{float32/int8/int16} thay \texttt{float64} $\to$ RAM $\approx$120 MB/chunk.
-  \item \texttt{numpy.select} vectorized cho phân loại delay.
-  \item Hoàn thành trong \textbf{3--8 phút}.
-\end{itemize}
-
-\vspace{2mm}
-\textbf{Xử lý missing:}
-\begin{itemize}
-  \item Cột delay: \texttt{fillna(0.0)}.
-  \item Thiếu FK: \texttt{dropna} loại dòng.
-  \item Kết quả: giữ $\sim$ 97.23\% bản ghi.
-\end{itemize}
-\end{column}
-\end{columns}
+\begin{frame}{Kết quả ETL: Các bảng chiều}
+  \begin{columns}[c,onlytextwidth]
+  \begin{column}{0.5\textwidth}
+    \includegraphics[width=\textwidth,height=0.9\textheight]{./images/system/2.png}
+  \end{column}
+  \begin{column}{0.5\textwidth}
+    \includegraphics[width=\textwidth]{./images/system/3.png}
+    \includegraphics[width=\textwidth]{./images/system/4.png}
+  \end{column}
+  \end{columns}
 \end{frame}

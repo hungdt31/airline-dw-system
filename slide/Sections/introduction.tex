@@ -6,55 +6,77 @@
 % --- Slide 1 ---
 \begin{frame}{Bối cảnh}
 \begin{columns}[T,onlytextwidth]
-\begin{column}{0.5\textwidth}
-\begin{itemize}
-  \item Năm 2015: khoảng \textbf{5,8 triệu} chuyến bay nội địa Hoa Kỳ.
-  \item Tỷ lệ đáng kể trễ đến $\geq 15$ phút,
-        gây chi phí vận hành và giảm trải nghiệm hành khách.
-  \item Phân tích thủ công (Excel, SQL rời rạc) \textbf{khó mở rộng},
-        không phát hiện được pattern ẩn.
-\end{itemize}
-
-\vspace{2mm}
-\begin{alertblock}{Nhu cầu}
-Cần một hệ thống tích hợp: tự động hóa dữ liệu, phân tích đa chiều OLAP
-\textbf{và} dự báo delay trước giờ cất cánh.
-\end{alertblock}
-\end{column}
-\begin{column}{0.4\textwidth}
-\centering
-\includegraphics[width=1.1\linewidth]{plane.jpg}
-\end{column}
+  \begin{column}{0.6\textwidth}
+    \begin{itemize}
+      \item Năm 2015, thị trường nội địa Hoa Kỳ ghi nhận hơn \textbf{5,8 triệu} chuyến bay, tạo ra khối lượng dữ liệu cực lớn và phức tạp.
+      \item Tỷ lệ trễ chuyến cao không chỉ gây tổn thất kinh tế nghiêm trọng mà còn ảnh hưởng trực tiếp đến uy tín ngành hàng không.
+      \item Các phương pháp phân tích truyền thống (Excel, SQL rời rạc) dần bộc lộ sự hạn chế về \textbf{khả năng mở rộng} và khó khai phá các quy luật ẩn.
+    \end{itemize}
+    
+    \begin{alertblock}{Nhu cầu thực tiễn}
+    Cần một giải pháp toàn diện: Tự động hóa luồng dữ liệu, phân tích tương tác đa chiều và ứng dụng Học máy để dự báo sớm rủi ro trễ chuyến.
+    \end{alertblock}
+  \end{column}
+  \begin{column}{0.35\textwidth}
+  \centering
+  \includegraphics[width=1.1\linewidth]{plane.jpg}
+  \end{column}
 \end{columns}
 \end{frame}
 
 % --- Slide 2 ---
 \begin{frame}{Mục tiêu đề tài}
-Ba mục tiêu cốt lõi:
-\begin{enumerate}
-  \item \textbf{Data Warehouse} theo Star Schema
-  \begin{itemize}
-    \item 1 bảng sự kiện (\texttt{fact\_flights}) + 4 bảng chiều.
-    \item Pipeline ETL streaming theo chunk.
-  \end{itemize}
+  Đề tài tập trung thiết lập một hệ thống quản trị và khai phá dữ liệu toàn diện với ba mục tiêu chiến lược:
+  \begin{columns}[c,onlytextwidth]
+    \begin{column}{0.4\textwidth}
+      \textbf{(1) Chuẩn hóa hạ tầng lưu trữ dữ liệu:}
+      \begin{itemize}
+        \item Thiết kế một kho dữ liệu tối ưu cho việc truy xuất và quản trị thông tin.
+        \item Xây dựng quy trình xử lý dữ liệu tự động, đảm bảo hiệu năng xử lý dữ liệu quy mô lớn.
+      \end{itemize}
+    \end{column}
 
-  \item \textbf{Dashboard OLAP đa trang}
-  \begin{itemize}
-    \item 6 trang phân tích tương tác (Streamlit + Plotly).
-    \item Hiện thực Slice, Dice, Roll-up, Drill-down (hướng đến xu hướng delay).
-  \end{itemize}
+    \begin{column}{0.55\textwidth}
+      \includegraphics[width=\textwidth]{./images/introduction/1.jpg}
+    \end{column}
+  \end{columns}
 
-  \item \textbf{Mô hình dự báo delay}
-  \begin{itemize}
-    \item So sánh 5 thuật toán ML trên cùng pipeline.
-    \item Đánh giá bằng 7 chỉ số, ưu tiên AUC-ROC.
-  \end{itemize}
-\end{enumerate}
-
-\begin{block}{Đầu ra}
-Dữ liệu thô $\rightarrow$ ETL $\rightarrow$ Kho dữ liệu $\rightarrow$ Dashboard + Mô hình dự báo.
-\end{block}
 \end{frame}
+
+\begin{frame}{Mục tiêu đề tài}
+  \begin{columns}[c,onlytextwidth]
+    \begin{column}{0.4\textwidth}
+        \textbf{(2) Phát triển nền tảng phân tích trực quan thông minh:}
+        \begin{itemize}
+          \item Xây dựng hệ thống báo cáo đa chiều, hỗ trợ tương tác linh hoạt để khai phá tri thức từ dữ liệu.
+          \item Ứng dụng các kỹ thuật phân tích chuyên sâu nhằm nhận diện xu hướng vận hành và hỗ trợ ra quyết định.
+        \end{itemize}
+    \end{column}
+
+    \begin{column}{0.55\textwidth}
+      \includegraphics[width=\textwidth]{./images/introduction/1.jpg}
+    \end{column}
+  \end{columns}
+
+\end{frame}
+
+\begin{frame}{Mục tiêu đề tài}
+  \begin{columns}[c,onlytextwidth]
+    \begin{column}{0.4\textwidth}
+      \textbf{(3) Nghiên cứu và ứng dụng học máy dự báo:}
+      \begin{itemize}
+        \item Thực hiện so sánh hiệu suất giữa các kiến trúc học máy hiện đại trên cùng một nền tảng dữ liệu.
+        \item Xây dựng mô hình dự báo có độ tin cậy cao dựa trên các bộ chỉ số đánh giá đa diện.
+      \end{itemize}
+    \end{column}
+
+    \begin{column}{0.55\textwidth}
+      \includegraphics[width=\textwidth]{./images/introduction/1.jpg}
+    \end{column}
+  \end{columns}
+
+\end{frame}
+
 
 % --- Slide 3 ---
 \begin{frame}{Nguồn dữ liệu}

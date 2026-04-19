@@ -1,12 +1,43 @@
 % ============================================================
 % SECTION 4: DASHBOARD
 % ============================================================
-\section{Dashboard OLAP}
+\section{Phân tích và trình bày}
+
+
+\begin{frame}{Phân tích OLAP đa chiều}
+  \textbf{OLAP (Online Analytical Processing)} là kỹ thuật phân tích đa chiều, hỗ trợ khám phá tri thức thông qua việc tương tác và đào sâu dữ liệu linh hoạt trên Star Schema.
+
+  \vspace{2mm}
+  \begin{columns}[T,onlytextwidth]
+      \begin{column}{0.48\textwidth}
+          \begin{block}{5 thao tác tương tác cốt lõi}
+              \begin{description}[\textbf{Drill-down}]
+                  \item[\textbf{Roll-up}] Tổng hợp mức cao (Tháng $\rightarrow$ Quý).
+                  \item[\textbf{Drill-down}] Chi tiết hóa (Hãng $\rightarrow$ Chuyến).
+                  \item[\textbf{Slice}] Cắt lớp theo 1 chiều (Tháng 12).
+                  \item[\textbf{Dice}] Lọc theo nhiều chiều (Hãng A + Bang B).
+                  \item[\textbf{Pivot}] Xoay trục quan sát (Hãng bay $\leftrightarrow$ Sân bay).
+              \end{description}
+          \end{block}
+      \end{column}
+      
+      \begin{column}{0.48\textwidth}
+          \begin{block}{Hiện thực hóa trên Dashboard}
+              \begin{itemize}
+                  \item \textbf{Slice/Dice:} Tích hợp qua bộ lọc Sidebar trên toàn hệ thống.
+                  \item \textbf{Roll-up/Drill-down:} Chuyển đổi linh hoạt giữa các cấp độ thời gian.
+                  \item \textbf{Pivot:} Thay đổi góc nhìn dữ liệu trên các trang chuyên biệt.
+              \end{itemize}
+          \end{block}
+      \end{column}
+  \end{columns}
+\end{frame}
 
 % --- Slide 14 ---
 \begin{frame}{Tổng quan Dashboard}
 \begin{itemize}
-  \item Xây dựng bằng \textbf{Streamlit} + \textbf{Plotly}, kết nối trực tiếp \texttt{airline\_dw.db}.
+  % \item Xây dựng bằng \textbf{Streamlit} + \textbf{Plotly}, kết nối trực tiếp \texttt{airline\_dw.db}.
+  \item Ứng dụng hệ sinh thái \textbf{Streamlit} và \textbf{Plotly} để xây dựng môi trường báo cáo tương tác, đảm bảo tính trực quan và thẩm mỹ cao.
   \item \textbf{6 trang} điều hướng qua sidebar, bộ lọc chung áp dụng cho các trang Tổng quan, Tuyến đường, Thời gian, Nguyên nhân.
 \end{itemize}
 
@@ -36,6 +67,18 @@
 
 \end{frame}
 
+\begin{frame}{Trang Tổng quan}
+  \begin{columns}[T,onlytextwidth]
+  \begin{column}{0.5\textwidth}
+    \includegraphics[width=\linewidth,height=1.3\textheight,keepaspectratio]{overview.png}
+  \end{column}
+  \begin{column}{0.5\textwidth}
+  \centering
+  \includegraphics[width=\linewidth,height=1.3\textheight,keepaspectratio]{overview2.png}
+  \end{column}
+  \end{columns}
+  \end{frame}
+  
 % --- Slide 15 ---
 \begin{frame}{Trang Tổng quan}
 \begin{columns}[T,onlytextwidth]
@@ -49,25 +92,39 @@
   \item Delay trung bình: \textbf{4,5 phút}
 \end{itemize}
 
-\vspace{1mm}
-\textbf{Biểu đồ:}
-\begin{itemize}
-  \item Cơ cấu chuyến bay theo tháng (cột chồng).
-  \item Top 5 hãng OTP / Top 5 sân bay delay cao.
-  \item Xu hướng delay \& hủy theo tháng.
-\end{itemize}
 \end{column}
 \begin{column}{0.5\textwidth}
-\centering
-\includegraphics[width=\linewidth,height=0.7\textheight,keepaspectratio]{overview.png}
+  \textbf{Biểu đồ:}
+  \begin{itemize}
+    \item Cơ cấu chuyến bay theo tháng (cột chồng).
+    \item Top 5 hãng OTP / Top 5 sân bay delay cao.
+    \item Xu hướng delay \& hủy theo tháng.
+    \item Top 10 sân bay nhộn nhịp nhất và Top 10 sân bay delay cao nhất.
+  \end{itemize}
 \end{column}
 \end{columns}
 \end{frame}
 
+% --- Hình 1: Lượt chuyến và tổng phút trễ ---
+\begin{frame}[t]{Lượt chuyến và tổng phút trễ của các sân bay lớn}
+  \vspace{-1mm}
+  \centering
+  \includegraphics[width=\linewidth,height=0.5\textheight,keepaspectratio]{volumn_delay.png}
+  \vspace{1mm}
+  \footnotesize
+  \begin{itemize}\setlength\itemsep{0.15em}
+    \item \textbf{ATL vs ORD:} \texttt{ATL} dẫn đầu lưu lượng ($>743\,000$ chuyến) so với \texttt{ORD} ($\approx 615\,000$); thứ tự \textbf{tổng phút trễ} đảo ngược --- \texttt{ORD} $>9{,}2$ triệu phút, \texttt{ATL} $\approx 7{,}8$ triệu.
+          \textit{Nhận định:} \texttt{ORD} dễ chịu trễ hơn (thời tiết, vận hành).
+    \item \textbf{Điểm nóng:} \texttt{LGA}, \texttt{EWR} không Top~10 nhộn nhịp nhưng Top~10 tổng phút trễ --- quá tải NY/NJ.
+    \item \textbf{SEA, PHX:} nhộn nhịp nhưng không Top trễ nhiều nhất --- vận hành hiệu quả.
+    \item \textbf{DFW, DEN, LAX:} ổn định Top~3--5 ở cả hai biểu đồ; tổng phút trễ gần tỉ lệ thuận quy mô.
+  \end{itemize}
+  \end{frame}
+
 % --- Slide 16 ---
 \begin{frame}{Trang Phân tích tuyến đường}
 \begin{columns}[T,onlytextwidth]
-\begin{column}{0.48\textwidth}
+\begin{column}{0.4\textwidth}
 \begin{itemize}
   \item Top tuyến bay (cặp sân bay đi $\to$ đến) theo từng hãng.
   \item Bộ lọc địa lý: \textbf{bang xuất phát / bang đích},
@@ -76,7 +133,7 @@
         số tuyến và ngưỡng tối thiểu điều chỉnh được.
 \end{itemize}
 \end{column}
-\begin{column}{0.48\textwidth}
+\begin{column}{0.55\textwidth}
 \centering
 \includegraphics[width=\linewidth,height=0.7\textheight,keepaspectratio]{routes.png}
 \end{column}
@@ -85,24 +142,66 @@
 
 % --- Slide 17 ---
 \begin{frame}{Trang Phân tích thời gian}
-\begin{columns}[T,onlytextwidth]
+\begin{columns}[c,onlytextwidth]
 \begin{column}{0.48\textwidth}
 \begin{itemize}
   \item \textbf{Theo tháng}: heatmap số chuyến $\times$ nguyên nhân;
         delay TB tô màu theo mùa.
   \item \textbf{Theo quý}: cột delay TB Q1--Q4.
   \item \textbf{Theo thứ}: phút TB và tỷ lệ $\geq$15\%.
-  \item So sánh ngày thường vs. cuối tuần:
-        \textbf{5,4 phút} vs. \textbf{3,4 phút}.
+  \item So sánh ngày thường với cuối tuần.
   \item Delay theo \textbf{4 khung giờ} cất cánh.
 \end{itemize}
 \end{column}
 \begin{column}{0.48\textwidth}
 \centering
 \includegraphics[width=\linewidth,height=0.7\textheight,keepaspectratio]{time.png}
+\includegraphics[width=0.8\linewidth,height=0.7\textheight,keepaspectratio]{time2.png}
 \end{column}
 \end{columns}
 \end{frame}
+
+% --- Hình 2: Heatmap nguyên nhân -- tháng ---
+\begin{frame}[t]{Nguyên nhân và thời điểm (heatmap)}
+  \vspace{-1mm}
+  \centering
+  \includegraphics[width=\linewidth,height=0.55\textheight,keepaspectratio]{month_reason.png}
+  \vspace{1mm}
+  \footnotesize
+  \begin{itemize}\setlength\itemsep{0.15em}
+    \item \textbf{Hệ thống kiểm soát không lưu (NAS):} ổn định và nặng nhất theo tháng; căng ở tháng cao điểm (6, 7, 12).
+    \item \textbf{Máy bay đến muộn:} bám biến động lưu lượng --- Hè/Lễ càng đông, trễ dây chuyền càng dễ.
+    \item \textbf{An ninh và hãng hàng không:} gần như phẳng theo mùa --- ít phụ thuộc mùa vụ.
+  \end{itemize}
+  \end{frame}
+
+% --- Hình 3: Delay trung bình theo tháng ---
+\begin{frame}[t]{Tính thời điểm --- theo mùa và tháng}
+  \vspace{-1mm}
+  \centering
+  \includegraphics[width=\linewidth,height=0.6\textheight,keepaspectratio]{delay_month.png}
+  \vspace{1mm}
+  \footnotesize
+  \begin{itemize}\setlength\itemsep{0.15em}
+    \item \textbf{Đỉnh hè (tháng~6):} trễ TB $\approx 10$ phút; NAS và máy bay đến muộn lên cao --- quá tải du lịch hè.
+    \item \textbf{Đỉnh đông (tháng~2, 12):} thời tiết + nhu cầu Giáng sinh.
+    \item \textbf{Tháng~9--10:} trễ TB có lúc \textbf{âm} (sớm hơn lịch); áp lực hệ thống thấp nhất trong năm.
+  \end{itemize}
+  \end{frame}
+  
+  % --- Hình 4: Delay theo khung giờ ---
+  \begin{frame}[t]{Tính thời điểm --- theo khung giờ cất cánh}
+  \vspace{-1mm}
+  \centering
+  \includegraphics[width=\linewidth,height=0.6\textheight,keepaspectratio]{delay_hour.png}
+  \vspace{1mm}
+  \footnotesize
+  \begin{itemize}\setlength\itemsep{0.15em}
+    \item \textbf{00--06\,h:} trễ thấp nhất --- hệ thống ``nghỉ'', đường băng thông thoáng.
+    \item \textbf{Xu hướng trong ngày:} trễ TB tăng dần theo giờ.
+    \item \textbf{18--24\,h:} cao nhất ($\approx 15$ phút) --- trễ ban ngày lan sang chuyến tối (domino).
+  \end{itemize}
+  \end{frame}
 
 % --- Slide 18 ---
 \begin{frame}{Trang Phân tích nguyên nhân}
@@ -111,7 +210,7 @@
 \begin{itemize}
   \item Pie cơ cấu số chuyến theo nguyên nhân.
   \item Cột ngang delay TB theo từng loại.
-  \item Bảng tóm tắt: số chuyến, \% trên tổng chuyến (trong nhóm có nguyên nhân), delay TB, tổng phút trễ.
+  \item Bảng tóm tắt: số chuyến, \% trên tổng chuyến, \% trong nhóm có nguyên nhân, delay TB, tổng phút trễ.
   \item Biểu đồ \textbf{đóng góp tổng phút trễ} --- nguyên nhân nào
         chiếm thời gian chờ lớn nhất?
 \end{itemize}
@@ -125,83 +224,6 @@ Hệ thống không lưu (NAS), Máy bay đến muộn (Late Aircraft), Hãng h�
 \includegraphics[width=\linewidth,height=0.7\textheight,keepaspectratio]{reason.png}
 \end{column}
 \end{columns}
-\end{frame}
-
-% --- Slide 19 ---
-\begin{frame}{Trang Dự báo \& Database Explorer}
-\begin{columns}[T,onlytextwidth]
-\begin{column}{0.48\textwidth}
-\centering
-\textbf{Dự báo chuyến bay}\\[2mm]
-\includegraphics[width=\linewidth,height=0.48\textheight,keepaspectratio]{predict.png}\\
-\scriptsize Form: hãng, bang đi/đến, tháng, thứ, giờ, distance, elapsed time
-$\to$ nhãn + xác suất + gauge Plotly.
-\end{column}
-\begin{column}{0.48\textwidth}
-\centering
-\textbf{Database Explorer}\\[2mm]
-\includegraphics[width=\linewidth,height=0.48\textheight,keepaspectratio]{database.png}\\
-\scriptsize Star schema ASCII, số dòng, xem trước bảng, SQL tùy chỉnh (chỉ SELECT).
-\end{column}
-\end{columns}
-\end{frame}
-
-% --- Hình 1: Lượt chuyến và tổng phút trễ ---
-\begin{frame}[t]{Lượt chuyến và tổng phút trễ của các sân bay lớn}
-\vspace{-1mm}
-\centering
-\includegraphics[width=\linewidth,height=0.5\textheight,keepaspectratio]{volumn_delay.png}
-\vspace{1mm}
-\footnotesize
-\begin{itemize}\setlength\itemsep{0.15em}
-  \item \textbf{ATL vs ORD:} \texttt{ATL} dẫn đầu lưu lượng ($>743\,000$ chuyến) so với \texttt{ORD} ($\approx 615\,000$); thứ tự \textbf{tổng phút trễ} đảo ngược --- \texttt{ORD} $>9{,}2$ triệu phút, \texttt{ATL} $\approx 7{,}8$ triệu.
-        \textit{Nhận định:} \texttt{ORD} dễ chịu trễ hơn (thời tiết, vận hành).
-  \item \textbf{Điểm nóng:} \texttt{LGA}, \texttt{EWR} không Top~10 nhộn nhịp nhưng Top~10 tổng phút trễ --- quá tải NY/NJ.
-  \item \textbf{SEA, PHX:} nhộn nhịp nhưng không Top trễ nhiều nhất --- vận hành hiệu quả.
-  \item \textbf{DFW, DEN, LAX:} ổn định Top~3--5 ở cả hai biểu đồ; tổng phút trễ gần tỉ lệ thuận quy mô.
-\end{itemize}
-\end{frame}
-
-% --- Hình 2: Heatmap nguyên nhân -- tháng ---
-\begin{frame}[t]{Nguyên nhân và thời điểm (heatmap)}
-\vspace{-1mm}
-\centering
-\includegraphics[width=\linewidth,height=0.55\textheight,keepaspectratio]{month_reason.png}
-\vspace{1mm}
-\footnotesize
-\begin{itemize}\setlength\itemsep{0.15em}
-  \item \textbf{Hệ thống kiểm soát không lưu (NAS):} ổn định và nặng nhất theo tháng; căng ở tháng cao điểm (6, 7, 12).
-  \item \textbf{Máy bay đến muộn:} bám biến động lưu lượng --- Hè/Lễ càng đông, trễ dây chuyền càng dễ.
-  \item \textbf{An ninh và hãng hàng không:} gần như phẳng theo mùa --- ít phụ thuộc mùa vụ.
-\end{itemize}
-\end{frame}
-
-% --- Hình 3: Delay trung bình theo tháng ---
-\begin{frame}[t]{Tính thời điểm --- theo mùa và tháng}
-\vspace{-1mm}
-\centering
-\includegraphics[width=\linewidth,height=0.6\textheight,keepaspectratio]{delay_month.png}
-\vspace{1mm}
-\footnotesize
-\begin{itemize}\setlength\itemsep{0.15em}
-  \item \textbf{Đỉnh hè (tháng~6):} trễ TB $\approx 10$ phút; NAS và máy bay đến muộn lên cao --- quá tải du lịch hè.
-  \item \textbf{Đỉnh đông (tháng~2, 12):} thời tiết + nhu cầu Giáng sinh.
-  \item \textbf{Tháng~9--10:} trễ TB có lúc \textbf{âm} (sớm hơn lịch); áp lực hệ thống thấp nhất trong năm.
-\end{itemize}
-\end{frame}
-
-% --- Hình 4: Delay theo khung giờ ---
-\begin{frame}[t]{Tính thời điểm --- theo khung giờ cất cánh}
-\vspace{-1mm}
-\centering
-\includegraphics[width=\linewidth,height=0.6\textheight,keepaspectratio]{delay_hour.png}
-\vspace{1mm}
-\footnotesize
-\begin{itemize}\setlength\itemsep{0.15em}
-  \item \textbf{00--06\,h:} trễ thấp nhất --- hệ thống ``nghỉ'', đường băng thông thoáng.
-  \item \textbf{Xu hướng trong ngày:} trễ TB tăng dần theo giờ.
-  \item \textbf{18--24\,h:} cao nhất ($\approx 15$ phút) --- trễ ban ngày lan sang chuyến tối (domino).
-\end{itemize}
 \end{frame}
 
 % --- Hình 5: Delay theo nguyên nhân ---
@@ -248,3 +270,22 @@ $\to$ nhãn + xác suất + gauge Plotly.
   \item \textbf{Nhận định:} thời tiết không thường xuyên trên toàn mạng, nhưng khách quan, khó kiểm soát và thường gây gián đoạn đáng kể cho mỗi chuyến bị ảnh hưởng.
 \end{itemize}
 \end{frame}
+
+% --- Slide 19 ---
+\begin{frame}{Trang Dự báo \& Database Explorer}
+  \begin{columns}[T,onlytextwidth]
+  \begin{column}{0.48\textwidth}
+  \centering
+  \textbf{Dự báo chuyến bay}\\[2mm]
+  \includegraphics[width=\linewidth,height=0.6\textheight,keepaspectratio]{predict.png}\\
+  Form: hãng, bang đi/đến, tháng, thứ, giờ, distance, elapsed time
+  $\to$ nhãn + xác suất + minh họa bằng gauge Plotly.
+  \end{column}
+  \begin{column}{0.48\textwidth}
+  \centering
+  \textbf{Database Explorer}\\[2mm]
+  \includegraphics[width=\linewidth,height=0.6\textheight,keepaspectratio]{database.png}\\
+  Star schema ASCII, số dòng, xem trước bảng, SQL tùy chỉnh (chỉ SELECT).
+  \end{column}
+  \end{columns}
+  \end{frame}

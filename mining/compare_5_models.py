@@ -128,7 +128,16 @@ def load_data(limit: int = 500_000) -> pd.DataFrame:
 
 
 def preprocess(df: pd.DataFrame):
+    n_before = len(df)
     df = df.dropna(subset=["target", "month", "day_of_week", "airline_iata"])
+    n_after_dropna = len(df)
+    if n_before != n_after_dropna:
+        log.info(
+            "preprocess: dropna bỏ %d dòng (%d → %d)",
+            n_before - n_after_dropna,
+            n_before,
+            n_after_dropna,
+        )
     df["distance"]     = df["distance"].fillna(df["distance"].median())
     df["elapsed_time"] = df["elapsed_time"].fillna(df["elapsed_time"].median())
     df["dep_hour"]     = df["dep_hour"].fillna(12).clip(0, 23)
@@ -150,6 +159,7 @@ def preprocess(df: pd.DataFrame):
     ]
     X = df[feature_cols].astype(float)
     y = df["target"].astype(int)
+    log.info("Sau preprocess: %d mẫu (X.shape=%s, y.shape=%s)", len(X), X.shape, y.shape)
     return X, y, feature_cols
 
 

@@ -29,7 +29,402 @@
       <span class="kpi">Cột có missing: 12</span>
     </div>
 
-    <h2>1. Tỷ lệ Missing Từng Cột</h2>
+    <h2>1. Data Dictionary các file nguồn</h2>
+    <div class="note">
+      Bảng mô tả cột của 4 nguồn: <code>airlines.csv</code>, <code>airports.csv</code>,
+      <code>flights.csv</code> (trên tập mẫu đang chạy), và <code>L_AIRPORT_ID.xls</code> (nếu đọc được).
+    </div>
+    <h3>airlines.csv</h3><table class="dataframe tbl">
+  <thead>
+    <tr style="text-align: right;">
+      <th>column</th>
+      <th>description</th>
+      <th>dtype</th>
+      <th>n_rows_profiled</th>
+      <th>n_missing</th>
+      <th>pct_missing</th>
+      <th>n_unique_non_null</th>
+      <th>sample_values</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>IATA_CODE</td>
+      <td>Mã định danh hãng hàng không (IATA).</td>
+      <td>object</td>
+      <td>14</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>14</td>
+      <td>UA, AA, US</td>
+    </tr>
+    <tr>
+      <td>AIRLINE</td>
+      <td>Tên hãng hàng không.</td>
+      <td>object</td>
+      <td>14</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>14</td>
+      <td>United Air Lines Inc., American Airlines Inc., US Airways Inc.</td>
+    </tr>
+  </tbody>
+</table>
+<h3>airports.csv</h3><table class="dataframe tbl">
+  <thead>
+    <tr style="text-align: right;">
+      <th>column</th>
+      <th>description</th>
+      <th>dtype</th>
+      <th>n_rows_profiled</th>
+      <th>n_missing</th>
+      <th>pct_missing</th>
+      <th>n_unique_non_null</th>
+      <th>sample_values</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>IATA_CODE</td>
+      <td>Mã định danh địa điểm/sân bay (IATA).</td>
+      <td>object</td>
+      <td>322</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>322</td>
+      <td>ABE, ABI, ABQ</td>
+    </tr>
+    <tr>
+      <td>AIRPORT</td>
+      <td>Tên sân bay.</td>
+      <td>object</td>
+      <td>322</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>322</td>
+      <td>Lehigh Valley International Airport, Abilene Regional Airport, Albuquerque International Sunport</td>
+    </tr>
+    <tr>
+      <td>CITY</td>
+      <td>Thành phố của sân bay.</td>
+      <td>object</td>
+      <td>322</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>308</td>
+      <td>Allentown, Abilene, Albuquerque</td>
+    </tr>
+    <tr>
+      <td>STATE</td>
+      <td>Bang/Tiểu bang của sân bay.</td>
+      <td>object</td>
+      <td>322</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>54</td>
+      <td>PA, TX, NM</td>
+    </tr>
+    <tr>
+      <td>COUNTRY</td>
+      <td>Tên quốc gia của sân bay.</td>
+      <td>object</td>
+      <td>322</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>1</td>
+      <td>USA</td>
+    </tr>
+    <tr>
+      <td>LATITUDE</td>
+      <td>Vĩ độ của sân bay.</td>
+      <td>float64</td>
+      <td>322</td>
+      <td>3</td>
+      <td>0.9320</td>
+      <td>319</td>
+      <td>40.65236, 32.41132, 35.04022</td>
+    </tr>
+    <tr>
+      <td>LONGITUDE</td>
+      <td>Kinh độ của sân bay.</td>
+      <td>float64</td>
+      <td>322</td>
+      <td>3</td>
+      <td>0.9320</td>
+      <td>319</td>
+      <td>-75.4404, -99.6819, -106.60919</td>
+    </tr>
+  </tbody>
+</table>
+<h3>flights.csv (sample)</h3><table class="dataframe tbl">
+  <thead>
+    <tr style="text-align: right;">
+      <th>column</th>
+      <th>description</th>
+      <th>dtype</th>
+      <th>n_rows_profiled</th>
+      <th>n_missing</th>
+      <th>pct_missing</th>
+      <th>n_unique_non_null</th>
+      <th>sample_values</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>YEAR</td>
+      <td>Năm của chuyến bay.</td>
+      <td>int64</td>
+      <td>5819079</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>1</td>
+      <td>2015</td>
+    </tr>
+    <tr>
+      <td>MONTH</td>
+      <td>Tháng của chuyến bay.</td>
+      <td>int64</td>
+      <td>5819079</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>12</td>
+      <td>1, 2, 3</td>
+    </tr>
+    <tr>
+      <td>DAY</td>
+      <td>Ngày trong tháng của chuyến bay.</td>
+      <td>int64</td>
+      <td>5819079</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>31</td>
+      <td>1, 2, 3</td>
+    </tr>
+    <tr>
+      <td>DAY_OF_WEEK</td>
+      <td>Thứ trong tuần của chuyến bay.</td>
+      <td>int64</td>
+      <td>5819079</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>7</td>
+      <td>4, 5, 6</td>
+    </tr>
+    <tr>
+      <td>AIRLINE</td>
+      <td>Mã định danh hãng hàng không.</td>
+      <td>object</td>
+      <td>5819079</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>14</td>
+      <td>AS, AA, US</td>
+    </tr>
+    <tr>
+      <td>FLIGHT_NUMBER</td>
+      <td>Mã định danh chuyến bay.</td>
+      <td>int64</td>
+      <td>5819079</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>6952</td>
+      <td>98, 2336, 840</td>
+    </tr>
+    <tr>
+      <td>ORIGIN_AIRPORT</td>
+      <td>Sân bay khởi hành.</td>
+      <td>object</td>
+      <td>5819079</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>934</td>
+      <td>ANC, LAX, SFO</td>
+    </tr>
+    <tr>
+      <td>DESTINATION_AIRPORT</td>
+      <td>Sân bay đích.</td>
+      <td>object</td>
+      <td>5819079</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>935</td>
+      <td>SEA, PBI, CLT</td>
+    </tr>
+    <tr>
+      <td>SCHEDULED_DEPARTURE</td>
+      <td>Giờ khởi hành theo lịch.</td>
+      <td>int64</td>
+      <td>5819079</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>1321</td>
+      <td>5, 10, 20</td>
+    </tr>
+    <tr>
+      <td>DEPARTURE_TIME</td>
+      <td>Giờ khởi hành thực tế (xấp xỉ WHEELS_OFF - TAXI_OUT).</td>
+      <td>float64</td>
+      <td>5819079</td>
+      <td>86153</td>
+      <td>1.4810</td>
+      <td>1440</td>
+      <td>2354.0, 2.0, 18.0</td>
+    </tr>
+    <tr>
+      <td>DEPARTURE_DELAY</td>
+      <td>Tổng số phút trễ khởi hành.</td>
+      <td>float64</td>
+      <td>5819079</td>
+      <td>86153</td>
+      <td>1.4810</td>
+      <td>1217</td>
+      <td>-11.0, -8.0, -2.0</td>
+    </tr>
+    <tr>
+      <td>ELAPSED_TIME</td>
+      <td>Tổng thời gian thực tế của chuyến bay (AIR_TIME + TAXI_IN + TAXI_OUT).</td>
+      <td>float64</td>
+      <td>5819079</td>
+      <td>105071</td>
+      <td>1.8060</td>
+      <td>712</td>
+      <td>194.0, 279.0, 293.0</td>
+    </tr>
+    <tr>
+      <td>AIR_TIME</td>
+      <td>Thời gian trên không (từ WHEELS_OFF đến WHEELS_ON).</td>
+      <td>float64</td>
+      <td>5819079</td>
+      <td>105071</td>
+      <td>1.8060</td>
+      <td>675</td>
+      <td>169.0, 263.0, 266.0</td>
+    </tr>
+    <tr>
+      <td>DISTANCE</td>
+      <td>Khoảng cách giữa hai sân bay.</td>
+      <td>int64</td>
+      <td>5819079</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>1363</td>
+      <td>1448, 2330, 2296</td>
+    </tr>
+    <tr>
+      <td>SCHEDULED_ARRIVAL</td>
+      <td>Giờ đến theo lịch.</td>
+      <td>int64</td>
+      <td>5819079</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>1435</td>
+      <td>430, 750, 806</td>
+    </tr>
+    <tr>
+      <td>ARRIVAL_TIME</td>
+      <td>Giờ đến thực tế (xấp xỉ WHEELS_ON + TAXI_IN).</td>
+      <td>float64</td>
+      <td>5819079</td>
+      <td>92513</td>
+      <td>1.5900</td>
+      <td>1440</td>
+      <td>408.0, 741.0, 811.0</td>
+    </tr>
+    <tr>
+      <td>ARRIVAL_DELAY</td>
+      <td>Độ trễ đến (ARRIVAL_TIME - SCHEDULED_ARRIVAL).</td>
+      <td>float64</td>
+      <td>5819079</td>
+      <td>105071</td>
+      <td>1.8060</td>
+      <td>1240</td>
+      <td>-22.0, -9.0, 5.0</td>
+    </tr>
+    <tr>
+      <td>DIVERTED</td>
+      <td>Chuyến bay hạ cánh lệch sân bay đích theo lịch.</td>
+      <td>int64</td>
+      <td>5819079</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>2</td>
+      <td>0, 1</td>
+    </tr>
+    <tr>
+      <td>CANCELLED</td>
+      <td>Chuyến bay bị hủy (1 = hủy).</td>
+      <td>int64</td>
+      <td>5819079</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>2</td>
+      <td>0, 1</td>
+    </tr>
+    <tr>
+      <td>CANCELLATION_REASON</td>
+      <td>Lý do hủy chuyến: A - Hãng; B - Thời tiết; C - Hệ thống không lưu; D - An ninh.</td>
+      <td>object</td>
+      <td>5819079</td>
+      <td>5729195</td>
+      <td>98.4550</td>
+      <td>4</td>
+      <td>A, B, C</td>
+    </tr>
+    <tr>
+      <td>AIR_SYSTEM_DELAY</td>
+      <td>Số phút trễ do hệ thống không lưu.</td>
+      <td>float64</td>
+      <td>5819079</td>
+      <td>4755640</td>
+      <td>81.7250</td>
+      <td>570</td>
+      <td>25.0, 43.0, 0.0</td>
+    </tr>
+    <tr>
+      <td>SECURITY_DELAY</td>
+      <td>Số phút trễ do an ninh.</td>
+      <td>float64</td>
+      <td>5819079</td>
+      <td>4755640</td>
+      <td>81.7250</td>
+      <td>154</td>
+      <td>0.0, 46.0, 107.0</td>
+    </tr>
+    <tr>
+      <td>AIRLINE_DELAY</td>
+      <td>Số phút trễ do hãng hàng không.</td>
+      <td>float64</td>
+      <td>5819079</td>
+      <td>4755640</td>
+      <td>81.7250</td>
+      <td>1067</td>
+      <td>0.0, 15.0, 85.0</td>
+    </tr>
+    <tr>
+      <td>LATE_AIRCRAFT_DELAY</td>
+      <td>Số phút trễ do máy bay đến muộn từ chuyến trước.</td>
+      <td>float64</td>
+      <td>5819079</td>
+      <td>4755640</td>
+      <td>81.7250</td>
+      <td>695</td>
+      <td>0.0, 88.0, 31.0</td>
+    </tr>
+    <tr>
+      <td>WEATHER_DELAY</td>
+      <td>Số phút trễ do thời tiết.</td>
+      <td>float64</td>
+      <td>5819079</td>
+      <td>4755640</td>
+      <td>81.7250</td>
+      <td>632</td>
+      <td>0.0, 102.0, 128.0</td>
+    </tr>
+  </tbody>
+</table>
+<h3>L_AIRPORT_ID.xls</h3><p style='font-size:13px;color:#777'>Không có dữ liệu mô tả cho file này.</p>
+
+    <h2>2. Tỷ lệ Missing Từng Cột</h2>
     <div class="note">
       Cột delay thành phần (AIR_SYSTEM, WEATHER…) có ~76% missing — hiện tượng đặc thù:
       chỉ ghi nhận khi chuyến thật sự delay. ETL quy ước fillna(0).
@@ -226,7 +621,7 @@
   </tbody>
 </table>
 
-    <h2>2. Thống Kê Mô Tả và Outlier Cột Số</h2>
+    <h2>3. Thống Kê Mô Tả và Outlier Cột Số</h2>
     <div class="note">
       Delay âm = chuyến đến sớm hơn lịch (bình thường, GIỮ nguyên).
       Delay >1000 phút = hoãn qua ngày (hiếm nhưng thật, GIỮ; nhãn nhị phân trung hoà).
@@ -475,7 +870,62 @@
   </tbody>
 </table>
 
-    <h2>3. Cột Categorical — Cardinality và Giá Trị Phổ Biến</h2>
+    <h2>4. Kiểm chứng giả thuyết "Delay-component trống = đúng giờ?"</h2>
+    <div class="note">
+      Nhóm kiểm chứng loại chuyến hủy/chuyển hướng (CANCELLED=0, DIVERTED=0).<br>
+      Theo chuẩn OTP, chuyến đúng giờ nếu <code>ARRIVAL_DELAY &lt;= 15</code>.
+      Bảng dưới đồng thời hiển thị thêm chuẩn nghiêm ngặt <code>ARRIVAL_DELAY &lt;= 0</code>.
+    </div>
+    <div class="img-box">
+      <img src="figures/eda_delay_null_vs_ontime.png" alt="Delay null vs ontime">
+    </div>
+    <table class="dataframe tbl">
+  <thead>
+    <tr style="text-align: right;">
+      <th>group</th>
+      <th>n_group</th>
+      <th>pct_of_valid_flights</th>
+      <th>n_on_time_arrival_15</th>
+      <th>pct_on_time_arrival_15_in_group</th>
+      <th>n_delayed_arrival_gt15</th>
+      <th>pct_delayed_arrival_gt15_in_group</th>
+      <th>n_on_time_arrival_0</th>
+      <th>pct_on_time_arrival_0_in_group</th>
+      <th>n_delayed_arrival_gt0</th>
+      <th>pct_delayed_arrival_gt0_in_group</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>All component delay = NaN</td>
+      <td>4650569</td>
+      <td>81.3890</td>
+      <td>4650569</td>
+      <td>100.0000</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>3627112</td>
+      <td>77.9930</td>
+      <td>1023457</td>
+      <td>22.0070</td>
+    </tr>
+    <tr>
+      <td>All component delay in {0, NaN}</td>
+      <td>4650569</td>
+      <td>81.3890</td>
+      <td>4650569</td>
+      <td>100.0000</td>
+      <td>0</td>
+      <td>0.0000</td>
+      <td>3627112</td>
+      <td>77.9930</td>
+      <td>1023457</td>
+      <td>22.0070</td>
+    </tr>
+  </tbody>
+</table>
+
+    <h2>5. Cột Categorical — Cardinality và Giá Trị Phổ Biến</h2>
     <table class="dataframe tbl">
   <thead>
     <tr style="text-align: right;">
@@ -532,7 +982,7 @@
   </tbody>
 </table>
 
-    <h2>4. Chất Lượng JOIN (flights ↔ airlines / airports)</h2>
+    <h2>6. Chất Lượng JOIN (flights ↔ airlines / airports)</h2>
     <div class="note">
       Hàng không map được FK → sẽ bị dropna trong ETL transform_chunk.
       Tỷ lệ mất &lt;1% là chấp nhận được.
@@ -576,12 +1026,12 @@
   </tbody>
 </table>
 
-    <h2>5. Phân Tích Chuyến Hủy / Chuyển Hướng</h2>
+    <h2>7. Phân Tích Chuyến Hủy / Chuyển Hướng</h2>
     <ul>
     <li><b>CANCELLED</b>: {'count': 89884, 'pct': 1.54}</li><li><b>DIVERTED</b>: {'count': 15187, 'pct': 0.26}</li><li><b>CANCELLATION_REASON</b>: {'B': 48851, 'A': 25262, 'C': 15749, 'D': 22}</li>
     </ul>
 
-    <h2>6. Tổng Hợp Quyết Định ETL</h2>
+    <h2>8. Tổng Hợp Quyết Định ETL</h2>
     <div class="note">
       Dựa trên kết quả EDA — các quyết định đã được hiện thực trong
       <code>etl/transform.py</code> và <code>etl/extract.py</code>.

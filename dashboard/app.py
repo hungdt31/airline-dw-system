@@ -25,6 +25,7 @@ from page_causes import render_page_causes
 from page_overview import render_page_overview
 from page_predict import render_page_predict
 from page_time import render_page_time
+from remote_data import ensure_remote_data
 
 st.set_page_config(
     page_title="Airline DW Analytics",
@@ -34,6 +35,7 @@ st.set_page_config(
 )
 
 inject_dashboard_styles()
+ensure_remote_data()
 
 page_id, filters = render_app_sidebar(query)
 

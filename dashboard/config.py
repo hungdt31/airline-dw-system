@@ -9,6 +9,10 @@ DASH_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(DASH_DIR)
 
 DB_PATH = os.path.join(ROOT_DIR, "warehouse", "airline_dw.db")
+MODEL_PATH = os.path.join(ROOT_DIR, "mining", "model_delay.pkl")
+
+# HF dataset chứa DB + model — tải về khi chạy trên cloud (file không có trong git)
+DATA_REPO = os.environ.get("DATA_REPO", "kkoi31/airline-dw-data")
 
 BASE_JOIN = """
     FROM fact_flights f
